@@ -29,7 +29,7 @@ Os dois arquivos se ligam pela coluna `NOC`.
 | Camada | O que tem | Status |
 |---|---|---|
 | **raw** | cópia fiel dos arquivos de origem, tudo como texto (`raw.athlete_events`: 271.116 linhas; `raw.noc_regions`: 230 linhas) | feito |
-| **refined** | dados tipados, limpos e modelados (dimensões e fato) | em andamento: `refined.noc_regions` (231 linhas) |
+| **refined** | dados tipados, limpos e modelados (dimensões e fato) | em andamento: `refined.noc_regions` (231 linhas), `refined.games` (51), `refined.games_cities` (52) |
 | **marts** | indicadores, cada um gerado por um arquivo em `sql/marts/` | a fazer |
 
 ## Indicadores
@@ -61,6 +61,8 @@ A refined executa, em ordem, os arquivos de `sql/refined/` e imprime a contagem 
 
 ```
 refined.noc_regions: 231 linhas
+refined.games: 51 linhas
+refined.games_cities: 52 linhas
 ```
 
 _Os comandos das próximas camadas serão adicionados a cada etapa._
@@ -126,7 +128,7 @@ Em `athlete_events`, a ausência aparece só como `NA`, e só nas quatro colunas
 - **H8:** `Weight` precisa de um tipo com decimais; `Height` cabe em inteiro. O tipo é definido na fato (3.3).
 - **`notes` vazio:** decidir na `refined.noc_regions` se `''` vira nulo, como o `NA`.
 
-_H4, H5 e `notes` vazio já foram resolvidos em `refined.noc_regions` (ver "Decisões sobre o dado")._
+_H4, H5 e `notes` vazio já foram resolvidos em `refined.noc_regions`, e H2 em `refined.games` / `refined.games_cities` (ver "Decisões sobre o dado")._
 
 ## Decisões sobre o dado
 
@@ -142,6 +144,8 @@ _H4, H5 e `notes` vazio já foram resolvidos em `refined.noc_regions` (ver "Deci
 | Refined — `noc_regions` | Texto `NA` em `region` vira NULL | Regra geral da refined; sem isso, ROT, TUV e UNK pareciam uma região chamada "NA" (H5) | 3 (ROT, TUV, UNK) |
 | Refined — `noc_regions` | Texto vazio `''` em `notes` vira NULL | Na refined toda ausência é NULL, para consultar só com `IS NULL` | 209 |
 | Refined — `noc_regions` | Linha `SGP → Singapore` acrescentada a partir da linha `SIN`, que é mantida | Os atletas de Singapura usam `SGP`, que não existia em `noc_regions` (H4); sem a linha, ficariam sem região e a fato teria chave sem dimensão. Nenhum registro da origem é apagado ou alterado | +1 linha na dimensão (230 → 231); 349 linhas de atletas passam a ter região |
+| Refined — `games` | Uma linha por edição (`games_id` = texto de `Games`), com `year` convertido para INTEGER | Nos dados, `Games` é sempre `Year + ' ' + Season` e cada edição tem um único ano e temporada; Verão e Inverno do mesmo ano são edições distintas | 271.116 linhas da raw → 51 edições (29 de Verão, 22 de Inverno); 0 falhas na conversão de `year` |
+| Refined — `games` | Cidade fora de `refined.games`, numa tabela própria `refined.games_cities` (edição × cidade) | H2: 1956 Summer teve Melbourne (4.829 linhas) e Stockholm (298, todas de Equestrianism). Com a cidade na dimensão, essa edição viraria duas linhas; tirando a cidade da refined, o mart 03 dependeria da raw | 52 pares edição × cidade (51 edições + a segunda cidade de 1956) |
 
 ## Documentação
 
