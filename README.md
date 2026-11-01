@@ -58,6 +58,17 @@ Total: 271.346 linhas
 
 _Os comandos das próximas camadas serão adicionados a cada etapa._
 
+## Explorar o banco no navegador
+
+```bash
+uv run python ui.py
+```
+
+Abre o banco em http://localhost:4213 com a [DuckDB UI](https://duckdb.org/docs/stable/core_extensions/ui), **somente para leitura**: dá para consultar as tabelas, mas não alterar o banco. Na primeira vez, a extensão é baixada da internet. `Ctrl+C` encerra.
+
+- Se o banco ainda não existir, o script avisa e sai: rode a ingestão antes.
+- **Feche o `ui.py` (Ctrl+C) antes de rodar a ingestão.** Enquanto ele está aberto, o DuckDB não deixa outro processo gravar no arquivo, e a ingestão falha com `IO Error: Cannot open file ... já está sendo usado por outro processo`.
+
 ## Conferência da camada raw
 
 As contagens do banco foram comparadas com uma leitura independente dos arquivos, feita com o módulo `csv` da biblioteca padrão do Python (não com o pandas usado na ingestão). O `csv` respeita campos entre aspas, então conta registros, não linhas de texto.
