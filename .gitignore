@@ -1,0 +1,13 @@
+# Banco de dados gerado
+data/
+*.duckdb
+*.duckdb.wal
+
+# Ambiente Python
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+
+# Streamlit
+.streamlit/secrets.toml
