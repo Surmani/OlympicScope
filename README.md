@@ -29,7 +29,7 @@ Os dois arquivos se ligam pela coluna `NOC`.
 | Camada | O que tem | Status |
 |---|---|---|
 | **raw** | cópia fiel dos arquivos de origem, tudo como texto (`raw.athlete_events`: 271.116 linhas; `raw.noc_regions`: 230 linhas) | feito |
-| **refined** | dados tipados, limpos e modelados (dimensões e fato) | a fazer |
+| **refined** | dados tipados, limpos e modelados (dimensões e fato) | em andamento: `refined.noc_regions` (231 linhas) |
 | **marts** | indicadores, cada um gerado por um arquivo em `sql/marts/` | a fazer |
 
 ## Indicadores
@@ -45,6 +45,7 @@ git clone https://github.com/Surmani/OlympicScope.git
 cd OlympicScope
 uv sync
 uv run python -m pipeline.ingestao   # raw/ → schema raw do DuckDB
+uv run python -m pipeline.refined    # schema raw → schema refined (SQL em sql/refined/)
 uv run pytest
 ```
 
@@ -54,6 +55,12 @@ A ingestão cria o banco em `data/olympics.duckdb` e imprime a contagem de cada 
 raw.athlete_events: 271.116 linhas
 raw.noc_regions: 230 linhas
 Total: 271.346 linhas
+```
+
+A refined executa, em ordem, os arquivos de `sql/refined/` e imprime a contagem de cada tabela criada:
+
+```
+refined.noc_regions: 231 linhas
 ```
 
 _Os comandos das próximas camadas serão adicionados a cada etapa._
@@ -119,16 +126,22 @@ Em `athlete_events`, a ausência aparece só como `NA`, e só nas quatro colunas
 - **H8:** `Weight` precisa de um tipo com decimais; `Height` cabe em inteiro. O tipo é definido na fato (3.3).
 - **`notes` vazio:** decidir na `refined.noc_regions` se `''` vira nulo, como o `NA`.
 
+_H4, H5 e `notes` vazio já foram resolvidos em `refined.noc_regions` (ver "Decisões sobre o dado")._
+
 ## Decisões sobre o dado
 
-| Etapa | Decisão | Motivo |
-|---|---|---|
-| Estrutura | Arquivos originais versionados em `raw/` | Licença CC0 permite; quem clona chega aos mesmos números sem depender do Kaggle |
-| Estrutura | Banco DuckDB fora do git | É gerado do zero pelo pipeline; versionar criaria um arquivo binário que muda a cada execução |
-| Raw | Todas as colunas lidas como texto (VARCHAR) | Conversão de tipo é decisão; fica registrada na refined |
-| Raw | Texto `NA` mantido como texto, não convertido em nulo | No dataset a ausência vem escrita como `NA`; converter na leitura seria uma limpeza escondida na raw |
-| Raw | Faltando um arquivo de origem, nada é ingerido | Ingerir uma tabela de duas em silêncio gera indicadores errados que parecem certos |
-| Estrutura | Pasta `sql/investigacao/` (não prevista na estrutura inicial da spec) com as consultas das hipóteses | Cada número citado no README precisa ter a consulta de onde saiu, e qualquer pessoa pode rodá-la de novo |
+| Etapa | Decisão | Motivo | Linhas afetadas |
+|---|---|---|---|
+| Estrutura | Arquivos originais versionados em `raw/` | Licença CC0 permite; quem clona chega aos mesmos números sem depender do Kaggle | — |
+| Estrutura | Banco DuckDB fora do git | É gerado do zero pelo pipeline; versionar criaria um arquivo binário que muda a cada execução | — |
+| Raw | Todas as colunas lidas como texto (VARCHAR) | Conversão de tipo é decisão; fica registrada na refined | nenhuma (nada alterado) |
+| Raw | Texto `NA` mantido como texto, não convertido em nulo | No dataset a ausência vem escrita como `NA`; converter na leitura seria uma limpeza escondida na raw | nenhuma (nada alterado) |
+| Raw | Faltando um arquivo de origem, nada é ingerido | Ingerir uma tabela de duas em silêncio gera indicadores errados que parecem certos | — |
+| Estrutura | Pasta `sql/investigacao/` (não prevista na estrutura inicial da spec) com as consultas das hipóteses | Cada número citado no README precisa ter a consulta de onde saiu, e qualquer pessoa pode rodá-la de novo | — |
+| Refined — `noc_regions` | `TRIM` em todos os textos | Regra geral da refined: espaço sobrando faz o mesmo valor parecer dois | 0 (nenhum valor tinha espaço sobrando) |
+| Refined — `noc_regions` | Texto `NA` em `region` vira NULL | Regra geral da refined; sem isso, ROT, TUV e UNK pareciam uma região chamada "NA" (H5) | 3 (ROT, TUV, UNK) |
+| Refined — `noc_regions` | Texto vazio `''` em `notes` vira NULL | Na refined toda ausência é NULL, para consultar só com `IS NULL` | 209 |
+| Refined — `noc_regions` | Linha `SGP → Singapore` acrescentada a partir da linha `SIN`, que é mantida | Os atletas de Singapura usam `SGP`, que não existia em `noc_regions` (H4); sem a linha, ficariam sem região e a fato teria chave sem dimensão. Nenhum registro da origem é apagado ou alterado | +1 linha na dimensão (230 → 231); 349 linhas de atletas passam a ter região |
 
 ## Documentação
 
