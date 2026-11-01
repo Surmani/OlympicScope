@@ -8,6 +8,10 @@ Unidade 3.2a — executor da refined
 Executa, em ordem de nome, os arquivos ``sql/refined/NN_<tabela>.sql``. Cada
 arquivo cria uma tabela com ``CREATE OR REPLACE TABLE refined.<tabela>``.
 
+Desde a unidade 4.1, a execução genérica da pasta (ordem, nome da tabela,
+conferência e contagem) fica em ``pipeline/executor_sql.py``, compartilhada
+com os marts; as regras abaixo continuam valendo, agora aplicadas por lá.
+
 Regras e motivos
 ----------------
 
@@ -35,9 +39,9 @@ Regras e motivos
 Critérios de aceite (verificados em ``tests/test_refined.py``)
 -------------------------------------------------------------
 
-1. Os SQL são executados em ordem de nome.
-2. ``nome_tabela("01_noc_regions.sql")`` devolve ``"noc_regions"``.
-3. Um SQL que não cria a tabela com o nome do arquivo gera erro claro.
+1. Os SQL são executados em ordem de nome. (desde a 4.1: ``tests/test_executor_sql.py``)
+2. ``nome_tabela("01_noc_regions.sql")`` devolve ``"noc_regions"``. (idem)
+3. Um SQL que não cria a tabela com o nome do arquivo gera erro claro. (idem)
 4. Rodar duas vezes imprime exatamente a mesma coisa.
 5. ``refined.noc_regions``: texto aparado, 'NA' e '' viram NULL, linha SGP
    acrescentada a partir de SIN sem duplicar, nenhuma linha descartada.
@@ -79,7 +83,7 @@ from pathlib import Path
 
 import duckdb
 
-from pipeline import db
+from pipeline import db, executor_sql
 from pipeline.ingestao import formatar_milhar
 
 _RAIZ = Path(__file__).resolve().parent.parent
@@ -87,34 +91,9 @@ PASTA_SQL = _RAIZ / "sql" / "refined"
 ARQUIVO_VERIFICACOES = _RAIZ / "sql" / "verificacoes" / "refined.sql"
 
 
-def arquivos_sql(pasta: Path) -> list[Path]:
-    """Devolve os arquivos .sql da pasta em ordem de nome."""
-    return sorted(pasta.glob("*.sql"))
-
-
-def nome_tabela(arquivo: Path | str) -> str:
-    """Tira o prefixo numérico do nome do arquivo: 01_noc_regions.sql → noc_regions."""
-    return Path(arquivo).stem.split("_", 1)[1]
-
-
 def executar(con: duckdb.DuckDBPyConnection, pasta: Path) -> dict[str, int]:
-    """Executa os SQL da pasta em ordem e devolve a contagem de cada tabela criada."""
-    db.criar_schema(con, "refined")
-    contagens = {}
-    for arquivo in arquivos_sql(pasta):
-        tabela = nome_tabela(arquivo)
-        con.execute(arquivo.read_text(encoding="utf-8"))
-        existe = con.execute(
-            "SELECT COUNT(*) FROM information_schema.tables "
-            "WHERE table_schema = 'refined' AND table_name = ?",
-            [tabela],
-        ).fetchall()[0][0]
-        if not existe:
-            raise RuntimeError(f"{arquivo.name} não criou a tabela refined.{tabela}")
-        contagens[f"refined.{tabela}"] = con.execute(
-            f'SELECT COUNT(*) FROM refined."{tabela}"'
-        ).fetchall()[0][0]
-    return contagens
+    """Executa os SQL da pasta no schema refined (via executor_sql)."""
+    return executor_sql.executar(con, pasta, "refined")
 
 
 def verificar(con: duckdb.DuckDBPyConnection, arquivo: Path) -> list[tuple[str, int]]:

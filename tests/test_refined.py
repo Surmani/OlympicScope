@@ -59,42 +59,8 @@ def linhas(con, sql):
     return con.execute(sql).fetchall()
 
 
-# --- executor ---------------------------------------------------------------
-
-
-def test_nome_tabela_tira_prefixo():
-    assert refined.nome_tabela("01_noc_regions.sql") == "noc_regions"
-    assert refined.nome_tabela("12_athlete_results.sql") == "athlete_results"
-
-
-def test_executa_em_ordem_de_nome(tmp_path):
-    (tmp_path / "02_segunda.sql").write_text(
-        "CREATE OR REPLACE TABLE refined.segunda AS SELECT COUNT(*) AS n FROM refined.primeira",
-        encoding="utf-8",
-    )
-    (tmp_path / "01_primeira.sql").write_text(
-        "CREATE OR REPLACE TABLE refined.primeira AS SELECT 1 AS x",
-        encoding="utf-8",
-    )
-    conexao = duckdb.connect()
-    try:
-        contagens = refined.executar(conexao, tmp_path)
-    finally:
-        conexao.close()
-
-    assert list(contagens) == ["refined.primeira", "refined.segunda"]
-
-
-def test_sql_que_nao_cria_a_tabela_do_nome_gera_erro(tmp_path):
-    (tmp_path / "01_esperada.sql").write_text(
-        "CREATE OR REPLACE TABLE refined.outra AS SELECT 1 AS x", encoding="utf-8"
-    )
-    conexao = duckdb.connect()
-    try:
-        with pytest.raises(RuntimeError, match="refined.esperada"):
-            refined.executar(conexao, tmp_path)
-    finally:
-        conexao.close()
+# --- main --------------------------------------------------------------------
+# (os testes do executor genérico ficam em tests/test_executor_sql.py)
 
 
 def test_main_duas_vezes_imprime_igual(tmp_path, monkeypatch, capsys):
