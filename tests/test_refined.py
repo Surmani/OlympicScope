@@ -112,6 +112,7 @@ def test_main_duas_vezes_imprime_igual(tmp_path, monkeypatch, capsys):
         "refined.noc_regions: 5 linhas\n"
         "refined.games: 3 linhas\n"
         "refined.games_cities: 4 linhas\n"
+        "refined.events: 3 linhas\n"
     )
 
 
@@ -241,3 +242,57 @@ def test_games_cities_toda_edicao_existe_em_games(con):
         "SELECT COUNT(*) FROM refined.games_cities AS c "
         "LEFT JOIN refined.games AS g USING (games_id) WHERE g.games_id IS NULL",
     ) == [(0,)]
+
+
+# --- refined.events -------------------------------------------------------------
+
+
+def test_events_uma_linha_por_prova_com_id_ordenado(con):
+    refined.executar(con, refined.PASTA_SQL)
+
+    assert linhas(con, "SELECT event_id, sport, event FROM refined.events") == [
+        (1, "Equestrianism", "Dressage"),
+        (2, "Skiing", "Skiing Slalom"),
+        (3, "Swimming", "Swimming 100m"),
+    ]
+
+
+def test_events_tipos(con):
+    refined.executar(con, refined.PASTA_SQL)
+
+    tipos = linhas(
+        con,
+        "SELECT column_name, data_type FROM information_schema.columns "
+        "WHERE table_schema = 'refined' AND table_name = 'events' ORDER BY ordinal_position",
+    )
+    assert tipos == [
+        ("event_id", "INTEGER"),
+        ("sport", "VARCHAR"),
+        ("event", "VARCHAR"),
+    ]
+
+
+def test_events_espaco_sobrando_nao_cria_prova_nova(con):
+    con.execute(
+        "INSERT INTO raw.athlete_events VALUES ('5', 'Ed', 'M', '25', '175', '70', "
+        "'Brazil', 'BRA', '1994 Winter', '1994', 'Winter', 'Lillehammer', "
+        "' Skiing ', ' Skiing Slalom ', 'NA')"
+    )
+    refined.executar(con, refined.PASTA_SQL)
+
+    assert linhas(con, "SELECT COUNT(*) FROM refined.events") == [(3,)]
+
+
+def test_events_id_igual_em_duas_execucoes_e_independe_da_ordem_das_linhas(con):
+    refined.executar(con, refined.PASTA_SQL)
+    primeira = linhas(con, "SELECT event_id, sport, event FROM refined.events")
+
+    # Mesma entrada em outra ordem física: os ids não podem mudar.
+    con.execute(
+        "CREATE OR REPLACE TABLE raw.athlete_events AS "
+        'SELECT * FROM raw.athlete_events ORDER BY "Event" DESC'
+    )
+    refined.executar(con, refined.PASTA_SQL)
+    segunda = linhas(con, "SELECT event_id, sport, event FROM refined.events")
+
+    assert primeira == segunda
