@@ -319,6 +319,7 @@ olympicscope/
 ├── pipeline/
 │   ├── __init__.py
 │   ├── db.py                     # conexão e criação dos schemas
+│   ├── executor_sql.py           # executa uma pasta de SQL em ordem (usado por refined e marts)
 │   ├── ingestao.py               # raw/ → schema raw
 │   ├── refined.py                # raw → refined
 │   └── marts.py                  # executa sql/marts/*.sql em ordem
