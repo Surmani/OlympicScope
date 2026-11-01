@@ -304,6 +304,8 @@ O desafio trata o dashboard como opcional; neste projeto ele é **obrigatório**
 - Só `SELECT ... WHERE`; nenhuma regra de negócio, transformação ou agregação.
 - Filtros possíveis: temporada, edição, país (NOC), modalidade, sexo — cada gráfico usa apenas os filtros cujas colunas existem no mart que ele lê.
 - Títulos, unidades, legendas e uma frase explicando cada indicador, incluindo a diferença entre medalhas conquistadas e registros de medalhistas.
+- **Valores exibidos no padrão brasileiro**, por funções de formatação com testes (ex.: `formatar_altura(175)` → `"1,75 m"`, `formatar_peso(Decimal("63.5"))` → `"63,50 kg"`, milhar com ponto e decimal com vírgula). A formatação é só de exibição: banco, refined e marts continuam em centímetros e quilogramas.
+  Motivo: altura e peso já estão no sistema métrico (cm e kg, conferido na unidade 3.3); o que muda no padrão brasileiro é a forma de mostrar. Converter no banco faria contas sobre valores já arredondados.
 
 ## 5. Estrutura de diretórios
 
@@ -324,6 +326,8 @@ olympicscope/
 │   ├── investigacao/             # consultas das hipóteses H1–H8 (só leitura)
 │   │   └── hipoteses.sql
 │   ├── refined/                  # SQL das transformações (NN_<tabela>.sql, em ordem)
+│   ├── verificacoes/             # garantias checadas a cada execução (falha → exit 1)
+│   │   └── refined.sql
 │   └── marts/
 │       ├── 01_medalhas_por_pais_edicao.sql
 │       ├── 02_quadro_historico.sql
