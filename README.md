@@ -47,6 +47,7 @@ cd OlympicScope
 uv sync
 uv run python -m pipeline.ingestao   # raw/ → schema raw do DuckDB
 uv run python -m pipeline.refined    # schema raw → schema refined (SQL em sql/refined/)
+uv run python -m pipeline.marts      # schema refined → schema marts (SQL em sql/marts/)
 uv run pytest
 ```
 
@@ -69,6 +70,8 @@ refined.athletes: 135.571 linhas
 refined.athlete_results: 269.731 linhas
 verificações: 12 de 12 ok
 ```
+
+Os marts executam, em ordem, os arquivos de `sql/marts/` (um arquivo por indicador) e imprimem a contagem de cada tabela criada. Se a pasta não tiver nenhum SQL, o script avisa e termina com erro, em vez de "dar certo" sem gerar nada.
 
 _Os comandos das próximas camadas serão adicionados a cada etapa._
 
@@ -160,6 +163,7 @@ _H4, H5 e `notes` vazio já foram resolvidos em `refined.noc_regions`, H2 em `re
 | Refined — `athlete_results` | Idade, altura e peso ausentes continuam NULL (sem imputação) | Regra da spec: preencher seria inventar dado | NULL: `age` 9.315, `height` 58.814, `weight` 61.527 |
 | Refined — `athlete_results` | Toda chave da fato existe na dimensão | Regra da spec; conferido com LEFT JOIN em cada dimensão | 0 órfãos em `athlete_id`, `games_id`, `event_id` e `noc` |
 | Refined | Verificações de integridade rodam a cada execução, sobre os dados reais, e falham a execução se acharem problema | A spec manda garantir que toda chave da fato exista na dimensão; os testes provam isso só com dados inventados. Assim, uma mudança na raw ou num SQL da refined é percebida antes de chegar aos marts | 12 verificações, 0 problemas nos dados reais |
+| Estrutura | Execução de pastas de SQL num módulo único, `pipeline/executor_sql.py`, usado pela refined e pelos marts | As duas camadas fazem exatamente o mesmo (ordem pelo prefixo, nome da tabela conferido, contagem do banco); com duas cópias, uma correção seria esquecida na outra. A refined continuou com as mesmas contagens e 12 de 12 verificações depois da mudança | — |
 | Origem | Nomes sem letras acentuadas (ex.: `Mnica`, `Rukajrvi`) mantidos como vieram | O `athlete_events.csv` original tem 0 bytes fora do ASCII: os acentos já foram removidos na origem do Kaggle, não na nossa leitura. Não há como recuperar sem inventar dado | nenhuma (nada alterado) |
 | Projeto | Dashboard Streamlit obrigatório (no desafio é opcional) | Decisão do autor: o projeto só está completo com o dashboard lendo os marts | — |
 
