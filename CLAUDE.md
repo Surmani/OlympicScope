@@ -11,9 +11,9 @@ Responda sempre em português.
 
 ## Estado atual
 
-Concluídas e commitadas: unidades 0.1 (estrutura uv e .gitignore), 0.2 (arquivos originais em raw/) e 0.3 (README e docs/SPEC.md).
+Concluídas e commitadas: unidades 0.1 (estrutura uv e .gitignore), 0.2 (arquivos originais em raw/), 0.3 (README e docs/SPEC.md) e 1.1 (`pipeline/db.py` com testes).
 
-Próxima: **unidade 1.1 — `pipeline/db.py`**.
+Próxima: **unidade 2.1 — validação dos arquivos de origem**.
 
 Atualize esta seção ao final de cada unidade, depois que o usuário confirmar o commit.
 
