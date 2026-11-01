@@ -29,7 +29,7 @@ Os dois arquivos se ligam pela coluna `NOC`.
 | Camada | O que tem | Status |
 |---|---|---|
 | **raw** | cópia fiel dos arquivos de origem, tudo como texto (`raw.athlete_events`: 271.116 linhas; `raw.noc_regions`: 230 linhas) | feito |
-| **refined** | dados tipados, limpos e modelados (dimensões e fato) | em andamento: `refined.noc_regions` (231 linhas), `refined.games` (51), `refined.games_cities` (52), `refined.events` (765), `refined.athletes` (135.571) |
+| **refined** | dados tipados, limpos e modelados (dimensões e fato) | em andamento: `refined.noc_regions` (231 linhas), `refined.games` (51), `refined.games_cities` (52), `refined.events` (765), `refined.athletes` (135.571), fato `refined.athlete_results` (269.731) |
 | **marts** | indicadores, cada um gerado por um arquivo em `sql/marts/` | a fazer |
 | **dashboard** | app Streamlit em `app/app.py`, lendo só do schema `marts` | a fazer |
 
@@ -66,6 +66,7 @@ refined.games: 51 linhas
 refined.games_cities: 52 linhas
 refined.events: 765 linhas
 refined.athletes: 135.571 linhas
+refined.athlete_results: 269.731 linhas
 ```
 
 _Os comandos das próximas camadas serão adicionados a cada etapa._
@@ -131,7 +132,7 @@ Em `athlete_events`, a ausência aparece só como `NA`, e só nas quatro colunas
 - **H8:** `Weight` precisa de um tipo com decimais; `Height` cabe em inteiro. O tipo é definido na fato (3.3).
 - **`notes` vazio:** decidir na `refined.noc_regions` se `''` vira nulo, como o `NA`.
 
-_H4, H5 e `notes` vazio já foram resolvidos em `refined.noc_regions`, e H2 em `refined.games` / `refined.games_cities` (ver "Decisões sobre o dado")._
+_H4, H5 e `notes` vazio já foram resolvidos em `refined.noc_regions`, H2 em `refined.games` / `refined.games_cities`, e H1 e H8 em `refined.athlete_results` (ver "Decisões sobre o dado")._
 
 ## Decisões sobre o dado
 
@@ -152,6 +153,11 @@ _H4, H5 e `notes` vazio já foram resolvidos em `refined.noc_regions`, e H2 em `
 | Refined — `events` | Uma linha por par `sport + event`, com `event_id` gerado por `ROW_NUMBER()` ordenado por `sport` e `event` | A spec define a prova pelo par; nos dados, nenhuma prova aparece em duas modalidades. A ordenação torna o id determinístico (estável enquanto o conjunto de provas não mudar; o dataset é fixo) | 271.116 linhas da raw → 765 provas de 66 modalidades (29 delas de Art Competitions, mantidas; a exclusão é nos marts) |
 | Refined — `athletes` | Uma linha por atleta (`athlete_id` INTEGER, `name`, `sex`); idade, altura e peso ficam na fato | Esses três mudam a cada participação. H3 não se confirmou (nenhum ID com dois nomes ou dois sexos), então cada ID vira exatamente uma linha. Homônimos (713 nomes com mais de um ID) continuam separados, porque a chave é o ID | 271.116 linhas da raw → 135.571 atletas (33.981 F, 101.590 M); 0 falhas na conversão do ID |
 | Refined — `athletes` | Espaços excedentes em `name`: `TRIM` nas pontas e qualquer sequência de 2+ espaços no meio vira **um** espaço | A spec manda remover espaços excedentes; `name` é a única coluna do dataset com esse problema. Conferido nos dados: em todos os nomes alterados, as letras e o número de palavras continuam iguais (nada fica grudado, ex.: `João   Pedro` → `João Pedro`) | 157 atletas (35 com espaço nas pontas, 128 com espaço duplo no meio) |
+| Refined — `athlete_results` | Linhas idênticas nas 15 colunas saem, ficando uma (H1) | Uma cópia idêntica não acrescenta informação e infla contagens de linhas. Linhas que diferem em qualquer coluna ficam: medalhas em provas diferentes (ex.: 100 m e 200 m) nunca são duplicata, e as 89 repetições na mesma prova com medalha ou time diferente (regatas de 1900, obras de arte) são mantidas | −1.385 linhas (271.116 → 269.731), 1.315 delas de Art Competitions. Registros com medalha: 39.783 → 39.772 (−11 cópias: 3 de ouro, 8 de prata). Medalhas conquistadas: 18.905 → 18.905 (nenhuma perdida). Atletas com medalha em mais de uma prova na mesma edição: 3.414 → 3.414 |
+| Refined — `athlete_results` | `athlete_id`, `age` e `height` INTEGER; `weight` DECIMAL(5,2) | H8: altura não tem decimais; peso tem. Duas casas por decisão do autor | 0 falhas de conversão (todo NULL vem de `NA`). 6 pesos com 13 casas arredondados: `74.6666666666667` → 74.67 e `77.3333333333333` → 77.33 (3 linhas cada) |
+| Refined — `athlete_results` | Unidades mantidas como na origem: altura em centímetros, peso em quilogramas | Já é o sistema métrico usado no Brasil (medianas: 175 cm e 70 kg); converter na refined só trocaria a escala sem ganho | nenhuma |
+| Refined — `athlete_results` | Idade, altura e peso ausentes continuam NULL (sem imputação) | Regra da spec: preencher seria inventar dado | NULL: `age` 9.315, `height` 58.814, `weight` 61.527 |
+| Refined — `athlete_results` | Toda chave da fato existe na dimensão | Regra da spec; conferido com LEFT JOIN em cada dimensão | 0 órfãos em `athlete_id`, `games_id`, `event_id` e `noc` |
 | Origem | Nomes sem letras acentuadas (ex.: `Mnica`, `Rukajrvi`) mantidos como vieram | O `athlete_events.csv` original tem 0 bytes fora do ASCII: os acentos já foram removidos na origem do Kaggle, não na nossa leitura. Não há como recuperar sem inventar dado | nenhuma (nada alterado) |
 | Projeto | Dashboard Streamlit obrigatório (no desafio é opcional) | Decisão do autor: o projeto só está completo com o dashboard lendo os marts | — |
 

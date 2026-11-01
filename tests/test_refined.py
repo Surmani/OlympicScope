@@ -5,6 +5,8 @@ inventado em DuckDB em memória ou em tmp_path. Os SQL testados são os
 arquivos reais de sql/refined/.
 """
 
+from decimal import Decimal
+
 import duckdb
 import pytest
 
@@ -114,6 +116,7 @@ def test_main_duas_vezes_imprime_igual(tmp_path, monkeypatch, capsys):
         "refined.games_cities: 4 linhas\n"
         "refined.events: 3 linhas\n"
         "refined.athletes: 3 linhas\n"
+        "refined.athlete_results: 4 linhas\n"
     )
 
 
@@ -362,3 +365,137 @@ def test_athletes_homonimos_continuam_separados(con):
     assert linhas(
         con, "SELECT athlete_id FROM refined.athletes WHERE name = 'Ana' ORDER BY 1"
     ) == [(1,), (7,)]
+
+
+# --- refined.athlete_results ------------------------------------------------------
+
+
+def inserir_athlete_event(con, *valores):
+    con.execute(
+        "INSERT INTO raw.athlete_events VALUES "
+        "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        list(valores),
+    )
+
+
+# Atleta 8 em 1992 Summer, com as colunas que os testes abaixo variam.
+def linha_atleta_8(event="Swimming 100m", medal="NA", weight="70", team="Brazil"):
+    return (
+        "8",
+        "Gil",
+        "M",
+        "22",
+        "180",
+        weight,
+        team,
+        "BRA",
+        "1992 Summer",
+        "1992",
+        "Summer",
+        "Barcelona",
+        "Swimming",
+        event,
+        medal,
+    )
+
+
+def test_fato_converte_tipos_e_na_vira_null(con):
+    refined.executar(con, refined.PASTA_SQL)
+
+    assert linhas(
+        con,
+        "SELECT athlete_id, games_id, noc, team, age, height, weight, medal "
+        "FROM refined.athlete_results ORDER BY games_id, athlete_id",
+    ) == [
+        (1, "1956 Summer", "BRA", "Brazil", 24, 170, Decimal("60.00"), "Gold"),
+        (2, "1956 Summer", "BRA", "Brazil", None, None, None, None),
+        (3, "1992 Summer", "BRA", "Brazil", 30, 180, Decimal("80.50"), None),
+        (1, "1994 Winter", "BRA", "Brazil", 62, 170, Decimal("61.00"), None),
+    ]
+
+
+def test_fato_tipos(con):
+    refined.executar(con, refined.PASTA_SQL)
+
+    tipos = linhas(
+        con,
+        "SELECT column_name, data_type FROM information_schema.columns "
+        "WHERE table_schema = 'refined' AND table_name = 'athlete_results' "
+        "ORDER BY ordinal_position",
+    )
+    assert tipos == [
+        ("athlete_id", "INTEGER"),
+        ("games_id", "VARCHAR"),
+        ("event_id", "INTEGER"),
+        ("noc", "VARCHAR"),
+        ("team", "VARCHAR"),
+        ("age", "INTEGER"),
+        ("height", "INTEGER"),
+        ("weight", "DECIMAL(5,2)"),
+        ("medal", "VARCHAR"),
+    ]
+
+
+def test_fato_peso_com_muitas_casas_arredonda_para_duas(con):
+    inserir_athlete_event(con, *linha_atleta_8(weight="74.6666666666667"))
+    refined.executar(con, refined.PASTA_SQL)
+
+    assert linhas(
+        con, "SELECT weight FROM refined.athlete_results WHERE athlete_id = 8"
+    ) == [(Decimal("74.67"),)]
+
+
+def test_fato_linha_identica_sai_ficando_uma(con):
+    inserir_athlete_event(con, *linha_atleta_8())
+    inserir_athlete_event(con, *linha_atleta_8())
+    refined.executar(con, refined.PASTA_SQL)
+
+    assert linhas(
+        con, "SELECT COUNT(*) FROM refined.athlete_results WHERE athlete_id = 8"
+    ) == [(1,)]
+
+
+def test_fato_medalhas_em_provas_diferentes_ficam_todas(con):
+    # Mesmo atleta, mesma edição, provas diferentes (100 m e 200 m): não é duplicata.
+    inserir_athlete_event(con, *linha_atleta_8(event="Swimming 100m", medal="Gold"))
+    inserir_athlete_event(con, *linha_atleta_8(event="Swimming 200m", medal="Gold"))
+    refined.executar(con, refined.PASTA_SQL)
+
+    assert linhas(
+        con,
+        "SELECT e.event, r.medal FROM refined.athlete_results AS r "
+        "JOIN refined.events AS e USING (event_id) "
+        "WHERE r.athlete_id = 8 ORDER BY e.event",
+    ) == [("Swimming 100m", "Gold"), ("Swimming 200m", "Gold")]
+
+
+def test_fato_mesma_prova_com_medalha_diferente_fica(con):
+    # Como em Rowing 1900: mesma prova, uma linha com medalha e outra sem.
+    inserir_athlete_event(con, *linha_atleta_8(medal="Bronze"))
+    inserir_athlete_event(con, *linha_atleta_8(medal="NA"))
+    refined.executar(con, refined.PASTA_SQL)
+
+    assert linhas(
+        con,
+        "SELECT medal FROM refined.athlete_results WHERE athlete_id = 8 "
+        "ORDER BY medal NULLS LAST",
+    ) == [("Bronze",), (None,)]
+
+
+def test_fato_toda_chave_existe_na_dimensao(con):
+    refined.executar(con, refined.PASTA_SQL)
+
+    orfaos = linhas(
+        con,
+        "SELECT "
+        "COUNT(*) FILTER (WHERE a.athlete_id IS NULL), "
+        "COUNT(*) FILTER (WHERE g.games_id IS NULL), "
+        "COUNT(*) FILTER (WHERE e.event_id IS NULL), "
+        "COUNT(*) FILTER (WHERE n.noc IS NULL) "
+        "FROM refined.athlete_results AS r "
+        "LEFT JOIN refined.athletes AS a ON r.athlete_id = a.athlete_id "
+        "LEFT JOIN refined.games AS g ON r.games_id = g.games_id "
+        "LEFT JOIN refined.events AS e ON r.event_id = e.event_id "
+        "LEFT JOIN refined.noc_regions AS n ON r.noc = n.noc",
+    )
+    assert orfaos == [(0, 0, 0, 0)]
