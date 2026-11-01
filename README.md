@@ -80,6 +80,45 @@ As contagens do banco foram comparadas com uma leitura independente dos arquivos
 
 Todos os registros têm o mesmo número de campos do cabeçalho (15 e 3). No banco, todas as colunas da raw são VARCHAR, e o texto `NA` foi preservado como texto: em `Medal`, por exemplo, são 231.333 linhas com `'NA'` e nenhuma nula.
 
+## Hipóteses H1–H8 (investigação antes da refined)
+
+Antes de transformar qualquer coisa, cada hipótese da [spec](docs/SPEC.md) foi verificada com uma consulta sobre o schema `raw`. Todas as consultas estão em [`sql/investigacao/hipoteses.sql`](sql/investigacao/hipoteses.sql), uma por bloco, e podem ser rodadas de novo no `ui.py`. Nada foi alterado nesta etapa: as decisões são tomadas nas unidades da refined, citando estes números.
+
+| # | Hipótese | Resultado | O que o dado mostrou |
+|---|---|---|---|
+| H1 | Existem linhas duplicadas idênticas em `athlete_events` | **Confirmada** | 612 grupos de linhas idênticas nas 15 colunas, somando 1.997 linhas; **1.385 linhas em excesso** (conferido por outro caminho: 271.116 linhas − 269.731 distintas = 1.385). Das 1.385, **1.315 são de `Art Competitions`**; o resto é Sailing (37), Cycling (32) e Equestrianism (1). |
+| H2 | Uma edição pode ter mais de uma cidade | **Confirmada** | Só uma edição: **1956 Summer**, com `Melbourne` e `Stockholm`. |
+| H3 | Um mesmo `ID` aparece com nomes ou sexo diferentes | **Não confirmada** | Dos 135.571 `ID`s distintos, 0 têm mais de um nome e 0 têm mais de um sexo. |
+| H4 | Existem NOCs em `athlete_events` que não estão em `noc_regions` | **Confirmada** | Só um: **`SGP`**, com 349 linhas (Team `Singapore` e nomes de barcos/duplas, de 1948 a 2016). No sentido inverso, `SIN` (região `Singapore`) está em `noc_regions` e nunca aparece em `athlete_events`. |
+| H5 | Vários NOCs apontam para a mesma região | **Confirmada** | 15 regiões com mais de um NOC, por exemplo: Germany (FRG, GDR, GER, SAA), Russia (EUN, RUS, URS), Czech Republic (BOH, CZE, TCH), Serbia (SCG, SRB, YUG). Uma das "regiões" agrupadas é o texto `NA` (ROT, TUV, UNK, cujas notas são Refugee Olympic Team, Tuvalu e Unknown): é ausência, não uma região. |
+| H6 | `Art Competitions` aparece como modalidade | **Confirmada** | 3.578 linhas, 7 edições (de 1912 a 1948), 29 provas e 1.814 atletas. |
+| H7 | Os Jogos de 1906 estão no dataset | **Confirmada** | `1906 Summer`, em Athina: 1.733 linhas e 841 atletas. |
+| H8 | `Height` e `Weight` têm valores decimais | **Confirmada só em `Weight`** | `Height`: 210.945 valores preenchidos, nenhum com ponto decimal. `Weight`: 208.241 preenchidos, **1.058 fracionários** (os mais comuns: 63.5, 69.5, 67.5). Nenhum valor preenchido deixa de converter para número nas duas colunas. |
+
+### Perfil de ausências
+
+Quantos valores de cada coluna são o texto `NA` ou texto vazio `''`. As colunas que não aparecem na tabela têm zero nos dois.
+
+| Tabela | Coluna | Texto `NA` | Texto vazio |
+|---|---|---|---|
+| `athlete_events` | `Age` | 9.474 | 0 |
+| `athlete_events` | `Height` | 60.171 | 0 |
+| `athlete_events` | `Weight` | 62.875 | 0 |
+| `athlete_events` | `Medal` | 231.333 | 0 |
+| `noc_regions` | `region` | 3 | 0 |
+| `noc_regions` | `notes` | 0 | 209 |
+
+Em `athlete_events`, a ausência aparece só como `NA`, e só nas quatro colunas que a spec já citava. Em `noc_regions`, `notes` vazio aparece como `''` (209 de 230 linhas), e `region` tem 3 `NA`.
+
+### Pontos que ficam para as próximas unidades
+
+- **H1 (duplicatas):** decidir na tabela fato (3.3) se as 1.385 linhas em excesso saem, sabendo que quase todas são de `Art Competitions`, que os marts já excluem.
+- **H2 (1956 com duas cidades):** pela spec, essa dúvida é apresentada antes de criar `refined.games` (3.2), com duas opções: uma tabela de cidades separada ou a cidade fora da dimensão.
+- **H4 (`SGP` × `SIN`):** decidir na `refined.noc_regions` (3.2) como ligar as 349 linhas de `SGP`, porque hoje elas ficariam sem região.
+- **H5 (`region = 'NA'`):** na refined, esses 3 viram nulo e deixam de parecer uma região chamada "NA".
+- **H8:** `Weight` precisa de um tipo com decimais; `Height` cabe em inteiro. O tipo é definido na fato (3.3).
+- **`notes` vazio:** decidir na `refined.noc_regions` se `''` vira nulo, como o `NA`.
+
 ## Decisões sobre o dado
 
 | Etapa | Decisão | Motivo |
@@ -89,6 +128,7 @@ Todos os registros têm o mesmo número de campos do cabeçalho (15 e 3). No ban
 | Raw | Todas as colunas lidas como texto (VARCHAR) | Conversão de tipo é decisão; fica registrada na refined |
 | Raw | Texto `NA` mantido como texto, não convertido em nulo | No dataset a ausência vem escrita como `NA`; converter na leitura seria uma limpeza escondida na raw |
 | Raw | Faltando um arquivo de origem, nada é ingerido | Ingerir uma tabela de duas em silêncio gera indicadores errados que parecem certos |
+| Estrutura | Pasta `sql/investigacao/` (não prevista na estrutura inicial da spec) com as consultas das hipóteses | Cada número citado no README precisa ter a consulta de onde saiu, e qualquer pessoa pode rodá-la de novo |
 
 ## Documentação
 
