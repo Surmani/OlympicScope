@@ -30,7 +30,7 @@ Os dois arquivos se ligam pela coluna `NOC`.
 |---|---|---|
 | **raw** | cópia fiel dos arquivos de origem, tudo como texto (`raw.athlete_events`: 271.116 linhas; `raw.noc_regions`: 230 linhas) | feito |
 | **refined** | dados tipados, limpos e modelados (dimensões e fato) | feito, com 12 verificações a cada execução: `refined.noc_regions` (231 linhas), `refined.games` (51), `refined.games_cities` (52), `refined.events` (765), `refined.athletes` (135.571), fato `refined.athlete_results` (269.731) |
-| **marts** | indicadores, cada um gerado por um arquivo em `sql/marts/` | em andamento: `marts.medalhas_por_pais_edicao` (3.803 linhas) |
+| **marts** | indicadores, cada um gerado por um arquivo em `sql/marts/` | em andamento: `marts.medalhas_por_pais_edicao` (3.803 linhas), `marts.quadro_historico` (347) |
 | **dashboard** | app Streamlit em `app/app.py`, lendo só do schema `marts` | a fazer |
 
 ## Indicadores
@@ -46,6 +46,7 @@ Cada indicador é uma tabela no schema `marts`, gerada por **um** arquivo SQL. O
 | Mart | Pergunta | Grão | SQL | Linhas |
 |---|---|---|---|---|
 | ★ `marts.medalhas_por_pais_edicao` | Quantas medalhas cada país conquistou em cada edição, e em que posição ficou? | NOC × edição (todos os NOCs participantes, inclusive sem medalha) | [`sql/marts/01_medalhas_por_pais_edicao.sql`](sql/marts/01_medalhas_por_pais_edicao.sql) | 3.803 |
+| ★ `marts.quadro_historico` | Qual é o quadro de medalhas de todos os tempos de cada país, no Verão e no Inverno? | NOC × temporada (inclusive quem nunca ganhou medalha) | [`sql/marts/02_quadro_historico.sql`](sql/marts/02_quadro_historico.sql) | 347 |
 
 ## Como rodar do zero
 
@@ -85,6 +86,7 @@ Os marts executam, em ordem, os arquivos de `sql/marts/` (um arquivo por indicad
 
 ```
 marts.medalhas_por_pais_edicao: 3.803 linhas
+marts.quadro_historico: 347 linhas
 ```
 
 _Os comandos das próximas camadas serão adicionados a cada etapa._
@@ -182,6 +184,7 @@ _H4, H5 e `notes` vazio já foram resolvidos em `refined.noc_regions`, H2 em `re
 | Mart 01 | Todos os NOCs participantes de cada edição, com zero quando não ganharam medalha; `ranking_edicao` NULL para quem não tem medalha | O dashboard pode mostrar quem participou sem medalha e filtrar só medalhistas com `WHERE`; quem não tem medalha não aparece no quadro | 3.803 pares NOC × edição, 1.631 com medalha |
 | Mart 01 | Ranking pelo critério do COI (ouro, prata, bronze) com `RANK()`: empatados dividem a posição e a próxima pula (1, 2, 2, 4) | É como os quadros oficiais mostram empates | 174 empates nos dados, envolvendo 536 NOCs |
 | Mart 01 | Regra da spec para medalhas conquistadas mantida, com limitação registrada | Em 19 casos a mesma edição + prova + NOC + medalha aparece com mais de um `Team`: às vezes são duas medalhas de verdade (KOR, 2 bronzes no tênis de mesa em duplas de 1992), às vezes uma só com o nome do cavalo em `Team` (hipismo por equipes de 2008). `Team` não separa os dois casos com segurança | no máximo 22 medalhas contadas a menos, de 18.534 |
+| Mart 02 | `quadro_historico` lê do mart 01 (soma por NOC × temporada) em vez de repetir as regras sobre a refined | Regras de contagem e exclusões escritas num lugar só; os totais dos dois marts batem por construção (toda medalha pertence a uma única edição). Ranking pelo critério do COI dentro de cada temporada, com `RANK()` e NULL para quem nunca ganhou medalha | 347 pares NOC × temporada (192 com medalha); 18.534 medalhas e 39.158 registros, iguais ao mart 01 |
 | Origem | Nomes sem letras acentuadas (ex.: `Mnica`, `Rukajrvi`) mantidos como vieram | O `athlete_events.csv` original tem 0 bytes fora do ASCII: os acentos já foram removidos na origem do Kaggle, não na nossa leitura. Não há como recuperar sem inventar dado | nenhuma (nada alterado) |
 | Projeto | Dashboard Streamlit obrigatório (no desafio é opcional) | Decisão do autor: o projeto só está completo com o dashboard lendo os marts | — |
 
