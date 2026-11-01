@@ -185,9 +185,17 @@ Idade, altura e peso não ficam aqui: são da participação. Antes de criar, ve
 | games_id | VARCHAR (ex.: `1992 Summer`) |
 | year | INTEGER |
 | season | VARCHAR |
+
+Verão e Inverno do mesmo ano são edições distintas.
+
+**refined.games_cities** — uma linha por par edição × cidade-sede.
+
+| Coluna | Tipo |
+|---|---|
+| games_id | VARCHAR |
 | city | VARCHAR |
 
-Verão e Inverno do mesmo ano são edições distintas. Antes de criar, verificar H2: se uma edição tiver mais de uma cidade, apresentar a dúvida ao usuário antes de implementar (opções: tabela `refined.games_cities` separada, ou cidade fora da dimensão).
+Decisão H2 (unidade 3.2b): 1956 Summer teve duas cidades (Melbourne e, só para o hipismo, Stockholm). A cidade saiu de `refined.games` para esta tabela, para que `games_id` continue único sem perder nenhuma cidade.
 
 **refined.noc_regions** — uma linha por NOC.
 
@@ -311,7 +319,9 @@ olympicscope/
 │   ├── refined.py                # raw → refined
 │   └── marts.py                  # executa sql/marts/*.sql em ordem
 ├── sql/
-│   ├── refined/                  # SQL das transformações
+│   ├── investigacao/             # consultas das hipóteses H1–H8 (só leitura)
+│   │   └── hipoteses.sql
+│   ├── refined/                  # SQL das transformações (NN_<tabela>.sql, em ordem)
 │   └── marts/
 │       ├── 01_medalhas_por_pais_edicao.sql
 │       ├── 02_quadro_historico.sql
