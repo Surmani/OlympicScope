@@ -11,9 +11,9 @@ Responda sempre em português.
 
 ## Estado atual
 
-Concluídas e commitadas: unidades 0.1 (estrutura uv e .gitignore), 0.2 (arquivos originais em raw/), 0.3 (README e docs/SPEC.md), 1.1 (`pipeline/db.py` com testes), 2.1 (validação dos arquivos de origem em `pipeline/ingestao.py`), 2.2 (leitura dos CSVs como texto e criação das tabelas raw), 2.3 (conferência das contagens e registro no README) e 2.4 (`ui.py`, explorador somente leitura). Etapa 2 fechada.
+Concluídas e commitadas: unidades 0.1 (estrutura uv e .gitignore), 0.2 (arquivos originais em raw/), 0.3 (README e docs/SPEC.md), 1.1 (`pipeline/db.py` com testes), 2.1 (validação dos arquivos de origem em `pipeline/ingestao.py`), 2.2 (leitura dos CSVs como texto e criação das tabelas raw), 2.3 (conferência das contagens e registro no README), 2.4 (`ui.py`, explorador somente leitura) e 3.1 (hipóteses H1–H8 em `sql/investigacao/hipoteses.sql` e no README). Etapa 2 fechada.
 
-Próxima: **unidade 3.1 — investigar as hipóteses H1–H8 e registrar no README, sem transformar nada**.
+Próxima: **unidade 3.2 — dimensões da refined**.
 
 Atualize esta seção ao final de cada unidade, depois que o usuário confirmar o commit.
 
