@@ -117,6 +117,7 @@ def test_main_duas_vezes_imprime_igual(tmp_path, monkeypatch, capsys):
         "refined.events: 3 linhas\n"
         "refined.athletes: 3 linhas\n"
         "refined.athlete_results: 4 linhas\n"
+        "verificações: 12 de 12 ok\n"
     )
 
 
@@ -499,3 +500,72 @@ def test_fato_toda_chave_existe_na_dimensao(con):
         "LEFT JOIN refined.noc_regions AS n ON r.noc = n.noc",
     )
     assert orfaos == [(0, 0, 0, 0)]
+
+
+# --- verificações (sql/verificacoes/refined.sql) ---------------------------------
+
+
+def problemas_por_verificacao(con):
+    return dict(refined.verificar(con, refined.ARQUIVO_VERIFICACOES))
+
+
+def test_verificacoes_dados_consistentes_dao_zero_problemas(con):
+    refined.executar(con, refined.PASTA_SQL)
+    resultados = refined.verificar(con, refined.ARQUIVO_VERIFICACOES)
+
+    assert len(resultados) == 12
+    assert all(problemas == 0 for _, problemas in resultados)
+
+
+def test_verificacoes_apontam_noc_orfao_na_fato(con):
+    # Atleta com um NOC que não existe em noc_regions.
+    inserir_athlete_event(
+        con,
+        "8", "Gil", "M", "22", "180", "70", "Atlantis", "XXX", "1992 Summer",
+        "1992", "Summer", "Barcelona", "Swimming", "Swimming 100m", "NA",
+    )  # fmt: skip
+    refined.executar(con, refined.PASTA_SQL)
+    problemas = problemas_por_verificacao(con)
+
+    assert problemas["athlete_results: todo noc existe em noc_regions"] == 1
+    assert sum(problemas.values()) == 1
+
+
+def test_verificacoes_apontam_chave_repetida_na_dimensao(con):
+    refined.executar(con, refined.PASTA_SQL)
+    con.execute("INSERT INTO refined.games VALUES ('1992 Summer', 1992, 'Summer')")
+    problemas = problemas_por_verificacao(con)
+
+    assert problemas["games: games_id único e não nulo"] == 1
+
+
+def test_verificacoes_apontam_medalha_invalida(con):
+    refined.executar(con, refined.PASTA_SQL)
+    con.execute(
+        "UPDATE refined.athlete_results SET medal = 'Ouro' WHERE athlete_id = 3"
+    )
+    problemas = problemas_por_verificacao(con)
+
+    assert problemas["athlete_results: medal só Gold, Silver, Bronze ou NULL"] == 1
+
+
+def test_main_com_orfao_encerra_com_codigo_1(tmp_path, monkeypatch, capsys):
+    banco = tmp_path / "teste.duckdb"
+    conexao = duckdb.connect(str(banco))
+    criar_raw_inventado(conexao)
+    inserir_athlete_event(
+        conexao,
+        "8", "Gil", "M", "22", "180", "70", "Atlantis", "XXX", "1992 Summer",
+        "1992", "Summer", "Barcelona", "Swimming", "Swimming 100m", "NA",
+    )  # fmt: skip
+    conexao.close()
+    monkeypatch.setattr(db, "CAMINHO_BANCO", banco)
+
+    with pytest.raises(SystemExit) as saida_programa:
+        refined.main()
+
+    assert saida_programa.value.code == 1
+    saida = capsys.readouterr()
+    assert "verificações: 1 de 12 falharam" in saida.err
+    assert "athlete_results: todo noc existe em noc_regions: 1 problemas" in saida.err
+    assert "ok" not in saida.out

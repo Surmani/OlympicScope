@@ -29,7 +29,7 @@ Os dois arquivos se ligam pela coluna `NOC`.
 | Camada | O que tem | Status |
 |---|---|---|
 | **raw** | cópia fiel dos arquivos de origem, tudo como texto (`raw.athlete_events`: 271.116 linhas; `raw.noc_regions`: 230 linhas) | feito |
-| **refined** | dados tipados, limpos e modelados (dimensões e fato) | em andamento: `refined.noc_regions` (231 linhas), `refined.games` (51), `refined.games_cities` (52), `refined.events` (765), `refined.athletes` (135.571), fato `refined.athlete_results` (269.731) |
+| **refined** | dados tipados, limpos e modelados (dimensões e fato) | feito, com 12 verificações a cada execução: `refined.noc_regions` (231 linhas), `refined.games` (51), `refined.games_cities` (52), `refined.events` (765), `refined.athletes` (135.571), fato `refined.athlete_results` (269.731) |
 | **marts** | indicadores, cada um gerado por um arquivo em `sql/marts/` | a fazer |
 | **dashboard** | app Streamlit em `app/app.py`, lendo só do schema `marts` | a fazer |
 
@@ -58,7 +58,7 @@ raw.noc_regions: 230 linhas
 Total: 271.346 linhas
 ```
 
-A refined executa, em ordem, os arquivos de `sql/refined/` e imprime a contagem de cada tabela criada:
+A refined executa, em ordem, os arquivos de `sql/refined/`, imprime a contagem de cada tabela criada e, no fim, roda as 12 verificações de [`sql/verificacoes/refined.sql`](sql/verificacoes/refined.sql) sobre os dados reais: chaves únicas e não nulas em cada dimensão, nenhuma chave da fato sem dimensão, nenhuma linha idêntica na fato e medalhas só com valores válidos. Se alguma falhar, a execução lista qual foi e termina com erro (código 1), em vez de seguir com dado inconsistente.
 
 ```
 refined.noc_regions: 231 linhas
@@ -67,6 +67,7 @@ refined.games_cities: 52 linhas
 refined.events: 765 linhas
 refined.athletes: 135.571 linhas
 refined.athlete_results: 269.731 linhas
+verificações: 12 de 12 ok
 ```
 
 _Os comandos das próximas camadas serão adicionados a cada etapa._
@@ -158,6 +159,7 @@ _H4, H5 e `notes` vazio já foram resolvidos em `refined.noc_regions`, H2 em `re
 | Refined — `athlete_results` | Unidades mantidas como na origem: altura em centímetros, peso em quilogramas | Já é o sistema métrico usado no Brasil (medianas: 175 cm e 70 kg); converter na refined só trocaria a escala sem ganho | nenhuma |
 | Refined — `athlete_results` | Idade, altura e peso ausentes continuam NULL (sem imputação) | Regra da spec: preencher seria inventar dado | NULL: `age` 9.315, `height` 58.814, `weight` 61.527 |
 | Refined — `athlete_results` | Toda chave da fato existe na dimensão | Regra da spec; conferido com LEFT JOIN em cada dimensão | 0 órfãos em `athlete_id`, `games_id`, `event_id` e `noc` |
+| Refined | Verificações de integridade rodam a cada execução, sobre os dados reais, e falham a execução se acharem problema | A spec manda garantir que toda chave da fato exista na dimensão; os testes provam isso só com dados inventados. Assim, uma mudança na raw ou num SQL da refined é percebida antes de chegar aos marts | 12 verificações, 0 problemas nos dados reais |
 | Origem | Nomes sem letras acentuadas (ex.: `Mnica`, `Rukajrvi`) mantidos como vieram | O `athlete_events.csv` original tem 0 bytes fora do ASCII: os acentos já foram removidos na origem do Kaggle, não na nossa leitura. Não há como recuperar sem inventar dado | nenhuma (nada alterado) |
 | Projeto | Dashboard Streamlit obrigatório (no desafio é opcional) | Decisão do autor: o projeto só está completo com o dashboard lendo os marts | — |
 

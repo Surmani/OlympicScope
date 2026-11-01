@@ -41,6 +41,37 @@ Critérios de aceite (verificados em ``tests/test_refined.py``)
 4. Rodar duas vezes imprime exatamente a mesma coisa.
 5. ``refined.noc_regions``: texto aparado, 'NA' e '' viram NULL, linha SGP
    acrescentada a partir de SIN sem duplicar, nenhuma linha descartada.
+
+Unidade 3.4 — verificações a cada execução
+==========================================
+
+Depois de criar as tabelas, executa ``sql/verificacoes/refined.sql``: cada
+linha do resultado é uma verificação (chaves únicas e não nulas, nenhum
+órfão da fato nas dimensões, nenhuma linha idêntica, medalhas válidas) com
+a quantidade de problemas.
+
+Regras e motivos
+----------------
+
+- As verificações rodam sobre os dados reais em toda execução.
+  Motivo: a spec manda garantir que toda chave da fato exista na dimensão;
+  os testes só provam isso com dados inventados. Se a raw ou um SQL da
+  refined mudar, a execução avisa em vez de gerar marts errados em silêncio.
+- As regras das verificações ficam no SQL, não aqui (mesmo motivo do executor).
+- Tudo ok: imprime ``verificações: N de N ok`` depois das contagens.
+  Alguma falha: lista em ``stderr`` cada verificação com problema e a
+  quantidade, e encerra com ``sys.exit(1)``. As tabelas ficam no banco para
+  investigar no ``ui.py``.
+  Motivo: falhar alto é melhor do que seguir para os marts com chave órfã.
+
+Critérios de aceite (verificados em ``tests/test_refined.py``)
+-------------------------------------------------------------
+
+6. Com dados consistentes, todas as verificações dão 0 problemas.
+7. Um NOC na fato que não existe em ``noc_regions`` é apontado pela
+   verificação de órfãos, e ``main()`` encerra com código 1 listando-a em
+   ``stderr``.
+8. Uma chave repetida numa dimensão é apontada pela verificação de unicidade.
 """
 
 import sys
@@ -51,7 +82,9 @@ import duckdb
 from pipeline import db
 from pipeline.ingestao import formatar_milhar
 
-PASTA_SQL = Path(__file__).resolve().parent.parent / "sql" / "refined"
+_RAIZ = Path(__file__).resolve().parent.parent
+PASTA_SQL = _RAIZ / "sql" / "refined"
+ARQUIVO_VERIFICACOES = _RAIZ / "sql" / "verificacoes" / "refined.sql"
 
 
 def arquivos_sql(pasta: Path) -> list[Path]:
@@ -84,15 +117,35 @@ def executar(con: duckdb.DuckDBPyConnection, pasta: Path) -> dict[str, int]:
     return contagens
 
 
+def verificar(con: duckdb.DuckDBPyConnection, arquivo: Path) -> list[tuple[str, int]]:
+    """Executa o SQL de verificações e devolve (verificação, problemas) de cada uma."""
+    return con.execute(arquivo.read_text(encoding="utf-8")).fetchall()
+
+
 def main() -> None:
     sys.stdout.reconfigure(encoding="utf-8")
     con = db.conectar()
     try:
         contagens = executar(con, PASTA_SQL)
+        resultados = verificar(con, ARQUIVO_VERIFICACOES)
     finally:
         con.close()
+
     for tabela, linhas in contagens.items():
         print(f"{tabela}: {formatar_milhar(linhas)} linhas")
+
+    falhas = [(nome, problemas) for nome, problemas in resultados if problemas > 0]
+    if falhas:
+        print(
+            f"verificações: {len(falhas)} de {len(resultados)} falharam",
+            file=sys.stderr,
+        )
+        for nome, problemas in falhas:
+            print(
+                f"  - {nome}: {formatar_milhar(problemas)} problemas", file=sys.stderr
+            )
+        sys.exit(1)
+    print(f"verificações: {len(resultados)} de {len(resultados)} ok")
 
 
 if __name__ == "__main__":
