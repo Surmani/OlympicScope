@@ -44,9 +44,10 @@ Pré-requisito: [uv](https://docs.astral.sh/uv/) instalado.
 git clone https://github.com/Surmani/OlympicScope.git
 cd OlympicScope
 uv sync
+uv run pytest
 ```
 
-_Os comandos do pipeline e dos testes serão adicionados a cada etapa._
+_Os comandos do pipeline serão adicionados a cada etapa._
 
 ## Decisões sobre o dado
 
@@ -65,4 +66,4 @@ _Preenchido ao longo do projeto, no momento em que acontece._
 
 | Etapa | O que a IA fez ou assumiu | Como descobri |
 |---|---|---|
-| | | |
+| 1.1 — `pipeline/db.py` | Leu a contagem de `gravar` com `fetchone()`, que no DuckDB 2.x deixa o resultado aberto e trava o próximo uso da mesma conexão | O teste "gravar duas vezes substitui sem duplicar" falhou com `ResourceInUseException`; corrigido para `fetchall()` |
