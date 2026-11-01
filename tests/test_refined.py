@@ -113,6 +113,7 @@ def test_main_duas_vezes_imprime_igual(tmp_path, monkeypatch, capsys):
         "refined.games: 3 linhas\n"
         "refined.games_cities: 4 linhas\n"
         "refined.events: 3 linhas\n"
+        "refined.athletes: 3 linhas\n"
     )
 
 
@@ -296,3 +297,68 @@ def test_events_id_igual_em_duas_execucoes_e_independe_da_ordem_das_linhas(con):
     segunda = linhas(con, "SELECT event_id, sport, event FROM refined.events")
 
     assert primeira == segunda
+
+
+# --- refined.athletes -----------------------------------------------------------
+
+
+def test_athletes_uma_linha_por_atleta(con):
+    refined.executar(con, refined.PASTA_SQL)
+
+    # Ana (ID 1) aparece em duas edições na raw inventada: vira uma linha só.
+    assert linhas(con, "SELECT athlete_id, name, sex FROM refined.athletes") == [
+        (1, "Ana", "F"),
+        (2, "Bo", "M"),
+        (3, "Cy", "M"),
+    ]
+
+
+def test_athletes_tipos(con):
+    refined.executar(con, refined.PASTA_SQL)
+
+    tipos = linhas(
+        con,
+        "SELECT column_name, data_type FROM information_schema.columns "
+        "WHERE table_schema = 'refined' AND table_name = 'athletes' ORDER BY ordinal_position",
+    )
+    assert tipos == [("athlete_id", "INTEGER"), ("name", "VARCHAR"), ("sex", "VARCHAR")]
+
+
+@pytest.mark.parametrize(
+    ("nome_raw", "esperado"),
+    [
+        ("João   Pedro", "João Pedro"),
+        ("João  Pedro", "João Pedro"),
+        ("João Pedro", "João Pedro"),
+        ("  João Pedro  ", "João Pedro"),
+        (" Sergio Ricardo  Reyes, Jr. ", "Sergio Ricardo Reyes, Jr."),
+        ("Ana", "Ana"),
+    ],
+)
+def test_athletes_espacos_excedentes_viram_um_espaco_nunca_zero(
+    con, nome_raw, esperado
+):
+    con.execute(
+        "INSERT INTO raw.athlete_events VALUES ('9', ?, 'M', '25', '175', '70', "
+        "'Brazil', 'BRA', '1992 Summer', '1992', 'Summer', 'Barcelona', "
+        "'Swimming', 'Swimming 100m', 'NA')",
+        [nome_raw],
+    )
+    refined.executar(con, refined.PASTA_SQL)
+
+    assert linhas(con, "SELECT name FROM refined.athletes WHERE athlete_id = 9") == [
+        (esperado,)
+    ]
+
+
+def test_athletes_homonimos_continuam_separados(con):
+    con.execute(
+        "INSERT INTO raw.athlete_events VALUES ('7', 'Ana', 'F', '30', '165', '55', "
+        "'Brazil', 'BRA', '1992 Summer', '1992', 'Summer', 'Barcelona', "
+        "'Swimming', 'Swimming 100m', 'NA')"
+    )
+    refined.executar(con, refined.PASTA_SQL)
+
+    assert linhas(
+        con, "SELECT athlete_id FROM refined.athletes WHERE name = 'Ana' ORDER BY 1"
+    ) == [(1,), (7,)]

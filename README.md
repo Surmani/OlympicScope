@@ -29,7 +29,7 @@ Os dois arquivos se ligam pela coluna `NOC`.
 | Camada | O que tem | Status |
 |---|---|---|
 | **raw** | cópia fiel dos arquivos de origem, tudo como texto (`raw.athlete_events`: 271.116 linhas; `raw.noc_regions`: 230 linhas) | feito |
-| **refined** | dados tipados, limpos e modelados (dimensões e fato) | em andamento: `refined.noc_regions` (231 linhas), `refined.games` (51), `refined.games_cities` (52), `refined.events` (765) |
+| **refined** | dados tipados, limpos e modelados (dimensões e fato) | em andamento: `refined.noc_regions` (231 linhas), `refined.games` (51), `refined.games_cities` (52), `refined.events` (765), `refined.athletes` (135.571) |
 | **marts** | indicadores, cada um gerado por um arquivo em `sql/marts/` | a fazer |
 | **dashboard** | app Streamlit em `app/app.py`, lendo só do schema `marts` | a fazer |
 
@@ -65,6 +65,7 @@ refined.noc_regions: 231 linhas
 refined.games: 51 linhas
 refined.games_cities: 52 linhas
 refined.events: 765 linhas
+refined.athletes: 135.571 linhas
 ```
 
 _Os comandos das próximas camadas serão adicionados a cada etapa._
@@ -149,6 +150,9 @@ _H4, H5 e `notes` vazio já foram resolvidos em `refined.noc_regions`, e H2 em `
 | Refined — `games` | Uma linha por edição (`games_id` = texto de `Games`), com `year` convertido para INTEGER | Nos dados, `Games` é sempre `Year + ' ' + Season` e cada edição tem um único ano e temporada; Verão e Inverno do mesmo ano são edições distintas | 271.116 linhas da raw → 51 edições (29 de Verão, 22 de Inverno); 0 falhas na conversão de `year` |
 | Refined — `games` | Cidade fora de `refined.games`, numa tabela própria `refined.games_cities` (edição × cidade) | H2: 1956 Summer teve Melbourne (4.829 linhas) e Stockholm (298, todas de Equestrianism). Com a cidade na dimensão, essa edição viraria duas linhas; tirando a cidade da refined, o mart 03 dependeria da raw | 52 pares edição × cidade (51 edições + a segunda cidade de 1956) |
 | Refined — `events` | Uma linha por par `sport + event`, com `event_id` gerado por `ROW_NUMBER()` ordenado por `sport` e `event` | A spec define a prova pelo par; nos dados, nenhuma prova aparece em duas modalidades. A ordenação torna o id determinístico (estável enquanto o conjunto de provas não mudar; o dataset é fixo) | 271.116 linhas da raw → 765 provas de 66 modalidades (29 delas de Art Competitions, mantidas; a exclusão é nos marts) |
+| Refined — `athletes` | Uma linha por atleta (`athlete_id` INTEGER, `name`, `sex`); idade, altura e peso ficam na fato | Esses três mudam a cada participação. H3 não se confirmou (nenhum ID com dois nomes ou dois sexos), então cada ID vira exatamente uma linha. Homônimos (713 nomes com mais de um ID) continuam separados, porque a chave é o ID | 271.116 linhas da raw → 135.571 atletas (33.981 F, 101.590 M); 0 falhas na conversão do ID |
+| Refined — `athletes` | Espaços excedentes em `name`: `TRIM` nas pontas e qualquer sequência de 2+ espaços no meio vira **um** espaço | A spec manda remover espaços excedentes; `name` é a única coluna do dataset com esse problema. Conferido nos dados: em todos os nomes alterados, as letras e o número de palavras continuam iguais (nada fica grudado, ex.: `João   Pedro` → `João Pedro`) | 157 atletas (35 com espaço nas pontas, 128 com espaço duplo no meio) |
+| Origem | Nomes sem letras acentuadas (ex.: `Mnica`, `Rukajrvi`) mantidos como vieram | O `athlete_events.csv` original tem 0 bytes fora do ASCII: os acentos já foram removidos na origem do Kaggle, não na nossa leitura. Não há como recuperar sem inventar dado | nenhuma (nada alterado) |
 | Projeto | Dashboard Streamlit obrigatório (no desafio é opcional) | Decisão do autor: o projeto só está completo com o dashboard lendo os marts | — |
 
 ## Documentação
