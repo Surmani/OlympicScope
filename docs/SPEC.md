@@ -87,7 +87,7 @@ O resultado de cada hipótese (confirmada ou não, com a contagem) deve ir para 
 - DuckDB como banco analítico
 - Pandas para leitura dos CSVs
 - SQL para transformação e marts
-- Streamlit para visualização (opcional no desafio)
+- Streamlit para visualização (obrigatório neste projeto, embora opcional no desafio)
 - Pytest para testes
 - Ruff para lint e formatação
 - uv para dependências e ambiente virtual
@@ -296,7 +296,9 @@ Prioridade: os marcados com ★ são o núcleo do projeto; os demais são feitos
 
 Cada mart tem no topo um comentário com: pergunta que responde, grão, regras de contagem e exclusões aplicadas.
 
-### STREAMLIT (opcional)
+### STREAMLIT (obrigatório)
+
+O desafio trata o dashboard como opcional; neste projeto ele é **obrigatório** (decisão do autor), e o projeto só está completo com ele.
 
 - Lê **exclusivamente** do schema `marts`.
 - Só `SELECT ... WHERE`; nenhuma regra de negócio, transformação ou agregação.
@@ -332,7 +334,7 @@ olympicscope/
 │       └── 07_ranking_atletas.sql
 ├── tests/
 ├── app/
-│   └── app.py                    # Streamlit (opcional)
+│   └── app.py                    # Streamlit (obrigatório)
 ├── docs/
 │   └── SPEC.md                   # este arquivo
 ├── executar.py                   # reconstrói tudo do zero: ingestão → refined → marts
@@ -453,7 +455,7 @@ O README é a primeira coisa que a correção abre. Ele precisa ter:
 1. **Fonte:** link do Kaggle e licença CC0.
 2. **O que é uma linha de cada tabela** (raw, refined e marts).
 3. **As três camadas** e os indicadores que saem delas, com o caminho do `.sql` de cada um.
-4. **Como rodar do zero**, em comandos: `git clone`, `uv sync`, `uv run python executar.py`, `uv run pytest` e, se houver, `uv run streamlit run app/app.py`.
+4. **Como rodar do zero**, em comandos: `git clone`, `uv sync`, `uv run python executar.py`, `uv run pytest` e `uv run streamlit run app/app.py`.
 5. **Decisões sobre o dado:** tabela com decisão, motivo e linhas afetadas, incluindo o resultado das hipóteses H1–H8.
 6. **Onde a IA errou:** seção curta, no final, com a etapa em que a IA errou ou assumiu algo não pedido e como foi descoberto (quase sempre contando linhas antes e depois). Preenchida durante o projeto, não no fim.
 
@@ -485,7 +487,7 @@ Quem clona o repositório tem que chegar aos indicadores só lendo o README.
 - 4.1 `pipeline/marts.py`.
 - 4.2 Um mart por unidade, começando pelos ★, cada um com seu teste.
 
-**Etapa 5 — Dashboard (opcional)**
+**Etapa 5 — Dashboard (obrigatório)**
 - Streamlit lendo apenas os marts.
 
 **Etapa 6 — Finalização**
