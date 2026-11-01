@@ -225,11 +225,11 @@ A combinação `sport + event` identifica uma prova. `event_id` é gerado de for
 | noc | VARCHAR |
 | team | VARCHAR |
 | age | INTEGER |
-| height | definir após H8 |
-| weight | definir após H8 |
+| height | INTEGER (centímetros; H8: nenhum valor decimal) |
+| weight | DECIMAL(5,2) (quilogramas; H8: há decimais; 2 casas por decisão do autor) |
 | medal | VARCHAR (Gold/Silver/Bronze ou NULL) |
 
-Grão: uma participação de um atleta em uma prova de uma edição.
+Grão: uma linha distinta da origem, ou seja, uma participação registrada de um atleta em uma prova de uma edição. Decisão H1 (unidade 3.3): linhas idênticas nas 15 colunas saem (1.385); em edições antigas, o mesmo atleta pode ter mais de uma linha na mesma prova com medalha ou time diferente (89 casos, ex.: várias regatas de Sailing 1900), e essas linhas são mantidas.
 
 Regras de transformação:
 
