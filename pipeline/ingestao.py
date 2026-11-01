@@ -1,10 +1,13 @@
 """Ingestão: arquivos de raw/ → schema raw do DuckDB.
 
-Unidade 2.1 — validação dos arquivos de origem.
+Como rodar: ``uv run python -m pipeline.ingestao``
+(rodar ``python pipeline/ingestao.py`` direto quebra o ``from pipeline import db``).
+
+Unidade 2.1 — validação dos arquivos de origem
+=============================================
 
 Antes de abrir o banco, a ingestão confere se todos os arquivos de origem
-existem em ``PASTA_RAW``. A leitura dos CSVs e a gravação no banco ficam para
-a unidade 2.2.
+existem em ``PASTA_RAW``.
 
 Regras e motivos
 ----------------
@@ -40,10 +43,62 @@ Critérios de aceite (verificados em ``tests/test_ingestao.py``)
 5. Faltando algum arquivo, ``validar_arquivos`` encerra com código 1 e
    escreve em ``stderr`` o nome de cada arquivo faltante e a pasta procurada;
    ``stdout`` fica vazio.
+
+Unidade 2.2 — leitura dos CSVs como texto e criação das tabelas raw
+===================================================================
+
+Cada arquivo de ``ARQUIVOS`` vira uma tabela no schema ``raw``, com o nome do
+arquivo sem extensão (``athlete_events.csv`` → ``raw.athlete_events``).
+
+Regras e motivos
+----------------
+
+- Nenhuma limpeza: nenhuma conversão de tipo, nenhuma linha descartada ou
+  deduplicada, nenhum nome de coluna alterado, nenhum valor corrigido.
+  Motivo: a fronteira entre "o dado que chegou" e "o dado que eu decidi"
+  fica na passagem de raw para refined.
+- Leitura com ``dtype=str``: todas as colunas viram VARCHAR.
+  Motivo: conversão de tipo é decisão, e decisões são registradas na refined.
+- Leitura com ``keep_default_na=False``: o texto ``NA`` continua sendo o
+  texto ``NA``.
+  Motivo: neste dataset a ausência vem escrita como ``NA``; transformá-la em
+  nulo na leitura seria uma normalização escondida dentro da raw.
+- ``encoding="utf-8"`` declarado, nunca adivinhado.
+  Motivo: adivinhar encoding pode trocar acentos em silêncio.
+- A validação dos arquivos acontece antes de abrir o banco.
+  Motivo: se faltar um arquivo, nem o arquivo do banco é criado.
+- Idempotente: ``CREATE OR REPLACE TABLE`` (via ``db.gravar``).
+  Motivo: rodar duas vezes tem que dar o mesmo resultado.
+- Ao final, uma linha por tabela com a contagem lida do banco e uma linha
+  com o total, milhar separado por ponto.
+  Motivo: a contagem na tela tem que ser a do que foi gravado, não a do que
+  estava na memória.
+- ``stdout`` reconfigurado para UTF-8 dentro do ``main()``, não na importação.
+  Motivo: no Windows os acentos saem embaralhados por padrão; e importar o
+  módulo (como fazem os testes e o futuro ``executar.py``) não deve mexer
+  no terminal de quem importa.
+- A conexão é fechada num ``finally``, mesmo se a leitura falhar no meio.
+  Motivo: uma conexão esquecida aberta trava o arquivo ``.duckdb``.
+
+Critérios de aceite (verificados em ``tests/test_ingestao.py``)
+--------------------------------------------------------------
+
+6. O texto ``NA`` chega ao banco como o texto ``NA``, não como NULL.
+7. Todas as colunas das tabelas raw são VARCHAR, inclusive as só numéricas.
+8. Os nomes das colunas são exatamente os do cabeçalho do CSV.
+9. Rodar a ingestão duas vezes imprime exatamente a mesma coisa e não
+   duplica linhas.
+10. Faltando um arquivo, o programa encerra com código 1 e o arquivo do
+    banco não é criado.
+11. ``formatar_milhar(271116)`` devolve ``"271.116"``.
 """
 
 import sys
 from pathlib import Path
+
+import pandas as pd
+
+from pipeline import db
 
 ARQUIVOS = ("athlete_events.csv", "noc_regions.csv")
 
@@ -64,3 +119,44 @@ def validar_arquivos(pasta: Path) -> None:
     linhas.append("Nada foi ingerido.")
     print("\n".join(linhas), file=sys.stderr)
     sys.exit(1)
+
+
+def ler_csv(caminho: Path) -> pd.DataFrame:
+    """Lê o CSV com todas as colunas como texto e o texto NA preservado."""
+    return pd.read_csv(caminho, dtype=str, keep_default_na=False, encoding="utf-8")
+
+
+def formatar_milhar(numero: int) -> str:
+    """Formata um inteiro com ponto como separador de milhar."""
+    return f"{numero:,}".replace(",", ".")
+
+
+def ingerir() -> dict[str, int]:
+    """Valida os arquivos, grava cada um no schema raw e devolve as contagens do banco."""
+    # db.PASTA_RAW é lido na hora da chamada, o que permite aos testes
+    # apontá-lo para uma pasta temporária.
+    validar_arquivos(db.PASTA_RAW)
+
+    contagens = {}
+    con = db.conectar()
+    try:
+        db.criar_schema(con, "raw")
+        for nome in ARQUIVOS:
+            tabela = Path(nome).stem
+            df = ler_csv(db.PASTA_RAW / nome)
+            contagens[f"raw.{tabela}"] = db.gravar(con, df, "raw", tabela)
+    finally:
+        con.close()
+    return contagens
+
+
+def main() -> None:
+    sys.stdout.reconfigure(encoding="utf-8")
+    contagens = ingerir()
+    for tabela, linhas in contagens.items():
+        print(f"{tabela}: {formatar_milhar(linhas)} linhas")
+    print(f"Total: {formatar_milhar(sum(contagens.values()))} linhas")
+
+
+if __name__ == "__main__":
+    main()
