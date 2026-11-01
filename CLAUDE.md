@@ -11,11 +11,11 @@ Responda sempre em português.
 
 ## Estado atual
 
-Concluídas e commitadas: unidades 0.1 (estrutura uv e .gitignore), 0.2 (arquivos originais em raw/), 0.3 (README e docs/SPEC.md), 1.1 (`pipeline/db.py` com testes), 2.1 (validação dos arquivos de origem em `pipeline/ingestao.py`), 2.2 (leitura dos CSVs como texto e criação das tabelas raw), 2.3 (conferência das contagens e registro no README), 2.4 (`ui.py`, explorador somente leitura), 3.1 (hipóteses H1–H8 em `sql/investigacao/hipoteses.sql` e no README) e 3.2a (`pipeline/refined.py` e `refined.noc_regions`). Etapa 2 fechada.
+Concluídas e commitadas: unidades 0.1 (estrutura uv e .gitignore), 0.2 (arquivos originais em raw/), 0.3 (README e docs/SPEC.md), 1.1 (`pipeline/db.py` com testes), 2.1 (validação dos arquivos de origem em `pipeline/ingestao.py`), 2.2 (leitura dos CSVs como texto e criação das tabelas raw), 2.3 (conferência das contagens e registro no README), 2.4 (`ui.py`, explorador somente leitura), 3.1 (hipóteses H1–H8 em `sql/investigacao/hipoteses.sql` e no README), 3.2a (`pipeline/refined.py` e `refined.noc_regions`) e 3.2b (`refined.games` e `refined.games_cities`). Etapa 2 fechada.
 
 A 3.2 foi dividida em quatro unidades: 3.2a `noc_regions`, 3.2b `games`, 3.2c `events`, 3.2d `athletes`.
 
-Próxima: **unidade 3.2b — `refined.games`**.
+Próxima: **unidade 3.2c — `refined.events`**.
 
 Atualize esta seção ao final de cada unidade, depois que o usuário confirmar o commit.
 
