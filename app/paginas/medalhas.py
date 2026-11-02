@@ -70,7 +70,9 @@ def quadro_por_edicao(season):
     )
 
     st.subheader("Um país ao longo das edições")
-    noc = escolher_pais(season, "pais_evolucao")
+    noc = escolher_pais(season, "pais_evolucao", so_com_medalha_padrao=True)
+    if noc is None:
+        return
     historico = carregar(consultas.pais_por_edicao(noc, season))
     st.line_chart(
         historico,

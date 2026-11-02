@@ -17,9 +17,27 @@ def mostrar_tabela(df, formatos: dict, nomes: dict) -> None:
     st.dataframe(tabela, hide_index=True, width="stretch")
 
 
-def escolher_pais(season: str, chave: str) -> str:
-    """Caixa de seleção de NOC (padrão: BRA), mostrando a região ao lado."""
-    lista = carregar(consultas.paises(season))
+def escolher_pais(season: str, chave: str, so_com_medalha_padrao: bool = False):
+    """Caixa de seleção de NOC (padrão: BRA), com a região ao lado.
+
+    Uma caixa de marcar logo acima permite listar só os países que já ganharam
+    medalha na temporada (ex.: no Inverno o Brasil nunca ganhou e sai da
+    lista). Devolve None se nenhum país sobrar.
+    """
+    so_com_medalha = st.checkbox(
+        "Listar só países que já ganharam medalha nesta temporada",
+        value=so_com_medalha_padrao,
+        key=f"{chave}_so_com_medalha",
+    )
+    consulta = (
+        consultas.paises_com_medalha(season)
+        if so_com_medalha
+        else consultas.paises(season)
+    )
+    lista = carregar(consulta)
+    if lista.empty:
+        st.warning("Nenhum país para mostrar com esse filtro.")
+        return None
     rotulos = dict(zip(lista["noc"], lista["region"].fillna("sem região")))
     nocs = list(rotulos)
     padrao = nocs.index("BRA") if "BRA" in nocs else 0

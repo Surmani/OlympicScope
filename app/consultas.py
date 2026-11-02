@@ -79,6 +79,15 @@ def paises(season: str) -> Consulta:
     )
 
 
+def paises_com_medalha(season: str) -> Consulta:
+    """Só os NOCs que já ganharam pelo menos uma medalha na temporada."""
+    return Consulta(
+        "SELECT noc, region FROM marts.quadro_historico "
+        "WHERE season = ? AND medalhas_conquistadas > 0 ORDER BY noc",
+        (season,),
+    )
+
+
 def modalidades(season: str) -> Consulta:
     return Consulta(
         "SELECT sport FROM marts.desempenho_esportivo WHERE season = ? ORDER BY sport",
@@ -142,23 +151,28 @@ def dominio_modalidade(sport: str, season: str) -> Consulta:
 # --- página Países ----------------------------------------------------------------
 
 
-def estreias(season: str) -> Consulta:
+def estreias(season: str, so_com_medalha: bool = False) -> Consulta:
+    # so_com_medalha = TRUE esconde quem nunca ganhou medalha na temporada.
     return Consulta(
         "SELECT noc, region, primeira_edicao, ano_primeira_edicao, primeira_medalha, "
         "ano_primeira_medalha, edicoes_ate_primeira_medalha, primeiro_ouro, "
         "ano_primeiro_ouro FROM marts.estreias_paises "
-        "WHERE season = ? ORDER BY ano_primeira_edicao, noc",
-        (season,),
+        "WHERE season = ? AND (NOT ? OR primeira_medalha IS NOT NULL) "
+        "ORDER BY ano_primeira_edicao, noc",
+        (season, so_com_medalha),
     )
 
 
-def eficiencia(games_id: str, delegacao_minima: int) -> Consulta:
+def eficiencia(
+    games_id: str, delegacao_minima: int, so_com_medalha: bool = False
+) -> Consulta:
+    # so_com_medalha = TRUE esconde quem não ganhou medalha na edição.
     return Consulta(
         "SELECT noc, region, atletas, medalhas_conquistadas, medalhas_por_100_atletas "
         "FROM marts.eficiencia_paises "
-        "WHERE games_id = ? AND atletas >= ? "
+        "WHERE games_id = ? AND atletas >= ? AND (NOT ? OR medalhas_conquistadas > 0) "
         "ORDER BY medalhas_por_100_atletas DESC, noc",
-        (games_id, delegacao_minima),
+        (games_id, delegacao_minima, so_com_medalha),
     )
 
 

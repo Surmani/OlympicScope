@@ -18,14 +18,15 @@ from pipeline import executor_sql, marts
 CONSULTAS = {
     "edicoes": consultas.edicoes("Summer"),
     "paises": consultas.paises("Summer"),
+    "paises_com_medalha": consultas.paises_com_medalha("Winter"),
     "modalidades": consultas.modalidades("Summer"),
     "quadro_edicao": consultas.quadro_edicao("2016 Summer"),
     "pais_por_edicao": consultas.pais_por_edicao("BRA", "Summer"),
     "quadro_historico": consultas.quadro_historico("Summer"),
     "ranking_atletas": consultas.ranking_atletas(10),
     "dominio_modalidade": consultas.dominio_modalidade("Athletics", "Summer"),
-    "estreias": consultas.estreias("Summer"),
-    "eficiencia": consultas.eficiencia("2016 Summer", 1),
+    "estreias": consultas.estreias("Summer", True),
+    "eficiencia": consultas.eficiencia("2016 Summer", 1, True),
     "genero_pais": consultas.genero_pais("BRA", "Summer"),
     "perfil_paises": consultas.perfil_paises("Summer", "M", 1),
     "perfil_modalidades": consultas.perfil_modalidades("Summer", "M", 1),
@@ -158,3 +159,35 @@ def test_programa_e_desempenho_filtram_a_temporada(banco):
     assert rodar(consultas.desempenho_modalidades("Summer"), banco)[
         "sport"
     ].tolist() == ["Athletics", "Basketball", "Swimming"]
+
+
+# --- filtro "só países com medalha" -------------------------------------------------
+
+
+def test_paises_com_medalha_tira_quem_nunca_ganhou(banco):
+    # No Inverno, BRA participou (2014) mas nunca ganhou medalha.
+    assert rodar(consultas.paises("Winter"), banco)["noc"].tolist() == [
+        "BRA",
+        "CAN",
+        "USA",
+    ]
+    assert rodar(consultas.paises_com_medalha("Winter"), banco)["noc"].tolist() == [
+        "CAN",
+        "USA",
+    ]
+
+
+def test_estreias_so_com_medalha(banco):
+    todos = rodar(consultas.estreias("Summer", False), banco)["noc"].tolist()
+    com_medalha = rodar(consultas.estreias("Summer", True), banco)["noc"].tolist()
+    assert "ARG" in todos
+    assert "ARG" not in com_medalha
+    assert len(com_medalha) == len(todos) - 1
+
+
+def test_eficiencia_so_com_medalha_na_edicao(banco):
+    todos = rodar(consultas.eficiencia("2016 Summer", 1, False), banco)
+    com_medalha = rodar(consultas.eficiencia("2016 Summer", 1, True), banco)
+    assert "ARG" in todos["noc"].tolist()
+    assert com_medalha["medalhas_conquistadas"].min() > 0
+    assert len(com_medalha) == len(todos) - 1

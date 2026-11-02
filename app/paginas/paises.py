@@ -27,7 +27,10 @@ def estreias(season, nome_temporada):
         "edição da medalha (1 = ganhou na estreia). — = ainda não aconteceu até "
         "2016 (Verão) ou 2014 (Inverno)."
     )
-    df = carregar(consultas.estreias(season))
+    so_com_medalha = st.checkbox(
+        "Mostrar só países que já ganharam medalha", key="estreias_so_com_medalha"
+    )
+    df = carregar(consultas.estreias(season, so_com_medalha))
     mostrar_tabela(
         df,
         {
@@ -61,7 +64,11 @@ def eficiencia(season):
     )
     games_id = escolher_edicao(season, "edicao_eficiencia")
     minimo = st.slider("Delegação mínima (atletas)", 1, 100, 10)
-    df = carregar(consultas.eficiencia(games_id, minimo))
+    so_com_medalha = st.checkbox(
+        "Mostrar só países que ganharam medalha nesta edição",
+        key="eficiencia_so_com_medalha",
+    )
+    df = carregar(consultas.eficiencia(games_id, minimo, so_com_medalha))
     st.bar_chart(
         df.head(10),
         x="noc",
@@ -95,6 +102,8 @@ def mulheres_na_delegacao(season):
         "Cada atleta conta uma vez por edição, mesmo disputando várias provas."
     )
     noc = escolher_pais(season, "pais_genero")
+    if noc is None:
+        return
     df = carregar(consultas.genero_pais(noc, season))
     st.line_chart(
         df, x="year", y="percentual_mulheres", x_label="Ano", y_label="% de mulheres"
