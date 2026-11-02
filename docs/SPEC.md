@@ -340,6 +340,8 @@ O desafio trata o dashboard como opcional; neste projeto ele é **obrigatório**
 - Títulos, unidades, legendas e uma frase explicando cada indicador, incluindo a diferença entre medalhas conquistadas e registros de medalhistas.
 - **Valores exibidos no padrão brasileiro**, por funções de formatação com testes (ex.: `formatar_altura(175)` → `"1,75 m"`, `formatar_peso(Decimal("63.5"))` → `"63,50 kg"`, milhar com ponto e decimal com vírgula). A formatação é só de exibição: banco, refined e marts continuam em centímetros e quilogramas.
   Motivo: altura e peso já estão no sistema métrico (cm e kg, conferido na unidade 3.3); o que muda no padrão brasileiro é a forma de mostrar. Converter no banco faria contas sobre valores já arredondados.
+- **Período dos dados sempre visível** (decisão do autor): no topo do app e na legenda dos indicadores que dizem "histórico" ou "atual", deixar claro que os dados vão do Verão de 1896 a 2016 e do Inverno de 1924 a 2014, só dos CSVs de origem, sem edições posteriores.
+  Motivo: quem abre o dashboard pode supor que os números incluem as edições mais recentes.
 - **Acessível para outras pessoas, só para consulta** (decisão do autor): banco aberto em modo leitura, conexão aberta e fechada a cada consulta, e resultados em `st.cache_data` (compartilhado entre visitantes). Gráficos nativos do Streamlit (os eixos saem no formato americano; tabelas, destaques e textos no brasileiro). A publicação é feita na unidade 6.4.
 
 ## 5. Estrutura de diretórios
