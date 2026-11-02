@@ -5,6 +5,7 @@ arquivos reais de sql/marts/, pelo mesmo executor do pipeline.
 """
 
 from decimal import Decimal
+from decimal import Decimal as D
 
 import duckdb
 import pytest
@@ -90,6 +91,26 @@ def criar_refined_inventada(conexao):
         "(32, '2014 Winter', 5, 'BRA', NULL), "
         "(12, '1906 Summer', 2, 'KEN', 'Gold')"
         ") AS t(athlete_id, games_id, event_id, noc, medal)"
+    )
+    # Idade, altura (cm) e peso (kg) por atleta, iguais em todas as provas da
+    # mesma edição, como nos dados reais. Atletas 3 e 22 sem altura e peso.
+    conexao.execute(
+        "ALTER TABLE refined.athlete_results ADD COLUMN age INTEGER; "
+        "ALTER TABLE refined.athlete_results ADD COLUMN height INTEGER; "
+        "ALTER TABLE refined.athlete_results ADD COLUMN weight DECIMAL(5, 2)"
+    )
+    conexao.execute(
+        "UPDATE refined.athlete_results AS r SET age = v.age, height = v.height, "
+        "weight = v.weight FROM (VALUES "
+        "(1, 20, 200, 100), (2, 22, 210, 110), (3, 24, NULL, NULL), "
+        "(4, 25, 190, 90), (5, 27, 200, 100), (6, 29, 210, 110), "
+        "(7, 22, 170, 60), (8, 24, 160, 50), (9, 30, 180, 75), "
+        "(10, 40, 165, 55), (11, 19, 175, 65), (12, 26, 178, 70), "
+        "(13, 21, 165, 55), (20, 23, 180, 75), (21, 25, 182, 77), "
+        "(22, 27, NULL, NULL), (30, 24, 168, 62), (31, 28, 185, 85), "
+        "(32, 26, 166, 60)"
+        ") AS v(athlete_id, age, height, weight) "
+        "WHERE r.athlete_id = v.athlete_id"
     )
 
 
@@ -317,4 +338,142 @@ def test_participacao_bate_com_atletas_do_mart_03(con):
         "JOIN (SELECT games_id, SUM(atletas) AS total "
         "FROM marts.participacao_genero GROUP BY games_id) AS p USING (games_id) "
         "WHERE e.atletas <> p.total",
+    ) == [(0,)]
+
+
+# --- 05_desempenho_esportivo ------------------------------------------------------
+
+
+def test_desempenho_esportivo_completo(con):
+    assert linhas(
+        con,
+        "SELECT sport, season, participacoes, atletas, provas, "
+        "medalhas_conquistadas, registros_medalhistas "
+        "FROM marts.desempenho_esportivo",
+    ) == [
+        ("Athletics", "Summer", 7, 7, 1, 4, 4),
+        ("Basketball", "Summer", 6, 6, 1, 2, 6),
+        ("Swimming", "Summer", 2, 2, 1, 2, 2),
+        ("Alpine Skiing", "Winter", 3, 3, 1, 2, 2),
+    ]
+
+
+def test_desempenho_basquete_1_medalha_por_time_e_registros_por_jogador(con):
+    # Ouro do BRA e prata do USA, times de 3: 2 medalhas e 6 registros.
+    assert linhas(
+        con,
+        "SELECT medalhas_conquistadas, registros_medalhistas "
+        "FROM marts.desempenho_esportivo WHERE sport = 'Basketball'",
+    ) == [(2, 6)]
+
+
+def test_desempenho_art_competitions_e_1906_ficam_fora(con):
+    # Art não aparece; o ouro do KEN em 1906 não entra no atletismo.
+    assert linhas(
+        con,
+        "SELECT COUNT(*) FROM marts.desempenho_esportivo "
+        "WHERE sport = 'Art Competitions'",
+    ) == [(0,)]
+    assert linhas(
+        con,
+        "SELECT participacoes, medalhas_conquistadas FROM marts.desempenho_esportivo "
+        "WHERE sport = 'Athletics'",
+    ) == [(7, 4)]
+
+
+# --- 06_perfil_atletas ----------------------------------------------------------
+
+
+def test_perfil_atletas_completo(con):
+    assert linhas(
+        con,
+        "SELECT sport, sex, season, idade_media, altura_media, peso_media, "
+        "n_idade, n_altura, n_peso FROM marts.perfil_atletas",
+    ) == [
+        ("Athletics", "F", "Summer", D("21.67"), D("168.33"), D("58.33"), 3, 3, 3),
+        ("Athletics", "M", "Summer", D("26.25"), D("180.67"), D("75.67"), 4, 3, 3),
+        ("Basketball", "M", "Summer", D("24.50"), D("202.00"), D("102.00"), 6, 5, 5),
+        ("Swimming", "F", "Summer", D("20.00"), D("170.00"), D("60.00"), 2, 2, 2),
+        ("Alpine Skiing", "F", "Winter", D("25.00"), D("167.00"), D("61.00"), 2, 2, 2),
+        ("Alpine Skiing", "M", "Winter", D("28.00"), D("185.00"), D("85.00"), 1, 1, 1),
+    ]
+
+
+def test_perfil_atleta_com_varias_provas_entra_uma_vez(con):
+    # A atleta 7 ganha uma segunda prova de atletismo em 2016: a média e o n
+    # do atletismo feminino não podem mudar.
+    con.execute(
+        "INSERT INTO refined.events VALUES (6, 'Athletics', 'Athletics Women''s 200 metres')"
+    )
+    con.execute(
+        "INSERT INTO refined.athlete_results "
+        "VALUES (7, '2016 Summer', 6, 'JAM', NULL, 22, 170, 60)"
+    )
+    executor_sql.executar(con, marts.PASTA_SQL, "marts")
+
+    assert linhas(
+        con,
+        "SELECT idade_media, n_idade FROM marts.perfil_atletas "
+        "WHERE sport = 'Athletics' AND sex = 'F'",
+    ) == [(D("21.67"), 3)]
+
+
+def test_perfil_ausencia_nao_entra_na_media_nem_no_n(con):
+    # Atleta 3 do basquete sem altura e peso: conta na idade (6) e não na
+    # altura e no peso (5).
+    assert linhas(
+        con,
+        "SELECT n_idade, n_altura, n_peso FROM marts.perfil_atletas "
+        "WHERE sport = 'Basketball'",
+    ) == [(6, 5, 5)]
+
+
+# --- 07_perfil_atletas_pais -------------------------------------------------------
+
+
+def test_perfil_atletas_pais_completo(con):
+    assert linhas(
+        con,
+        "SELECT noc, region, sex, season, idade_media, altura_media, peso_media, "
+        "n_idade, n_altura, n_peso FROM marts.perfil_atletas_pais",
+    ) == [
+        (
+            "ARG",
+            "Argentina",
+            "M",
+            "Summer",
+            D("28.50"),
+            D("180.00"),
+            D("75.00"),
+            2,
+            1,
+            1,
+        ),
+        ("BRA", "Brazil", "F", "Summer", D("19.00"), D("175.00"), D("65.00"), 1, 1, 1),
+        ("BRA", "Brazil", "M", "Summer", D("22.75"), D("197.33"), D("95.67"), 4, 3, 3),
+        ("CAN", "Canada", "F", "Summer", D("21.00"), D("165.00"), D("55.00"), 1, 1, 1),
+        ("JAM", "Jamaica", "F", "Summer", D("22.00"), D("170.00"), D("60.00"), 1, 1, 1),
+        ("KEN", "Kenya", "F", "Summer", D("24.00"), D("160.00"), D("50.00"), 1, 1, 1),
+        ("USA", "USA", "M", "Summer", D("26.00"), D("195.00"), D("93.75"), 4, 4, 4),
+        ("BRA", "Brazil", "F", "Winter", D("26.00"), D("166.00"), D("60.00"), 1, 1, 1),
+        ("CAN", "Canada", "F", "Winter", D("24.00"), D("168.00"), D("62.00"), 1, 1, 1),
+        ("USA", "USA", "M", "Winter", D("28.00"), D("185.00"), D("85.00"), 1, 1, 1),
+    ]
+
+
+def test_perfil_pais_atleta_em_duas_provas_da_mesma_edicao_entra_uma_vez(con):
+    # Atleta 11 (BRA, F) fez natação e 100 m em 2016: n = 1, não 2.
+    assert linhas(
+        con,
+        "SELECT n_idade FROM marts.perfil_atletas_pais "
+        "WHERE noc = 'BRA' AND sex = 'F' AND season = 'Summer'",
+    ) == [(1,)]
+
+
+def test_perfil_pais_exclusoes(con):
+    # USA F só teve a atleta 10, de Art Competitions; KEN M só teve 1906.
+    assert linhas(
+        con,
+        "SELECT COUNT(*) FROM marts.perfil_atletas_pais "
+        "WHERE (noc = 'USA' AND sex = 'F') OR (noc = 'KEN' AND sex = 'M')",
     ) == [(0,)]
