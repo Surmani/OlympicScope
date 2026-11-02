@@ -4,6 +4,8 @@ Nenhum teste abre data/olympics.duckdb nem lê raw/. Os SQL executados são os
 arquivos reais de sql/marts/, pelo mesmo executor do pipeline.
 """
 
+from decimal import Decimal
+
 import duckdb
 import pytest
 
@@ -53,6 +55,17 @@ def criar_refined_inventada(conexao):
         "('CAN', 'Canada', NULL), ('JAM', 'Jamaica', NULL), "
         "('KEN', 'Kenya', NULL), ('USA', 'USA', NULL)"
         ") AS t(noc, region, notes)"
+    )
+    # Sexo: 2016 tem 7 M e 4 F válidos (o atleta 10, F, só fez Art);
+    # 2012 só tem homens (como 1896); 2014 tem 2 F e 1 M.
+    conexao.execute(
+        "CREATE TABLE refined.athletes AS SELECT * FROM (VALUES "
+        "(1, 'A1', 'M'), (2, 'A2', 'M'), (3, 'A3', 'M'), (4, 'A4', 'M'), "
+        "(5, 'A5', 'M'), (6, 'A6', 'M'), (7, 'A7', 'F'), (8, 'A8', 'F'), "
+        "(9, 'A9', 'M'), (10, 'A10', 'F'), (11, 'A11', 'F'), (12, 'A12', 'M'), "
+        "(13, 'A13', 'F'), (20, 'A20', 'M'), (21, 'A21', 'M'), (22, 'A22', 'M'), "
+        "(30, 'A30', 'F'), (31, 'A31', 'M'), (32, 'A32', 'F')"
+        ") AS t(athlete_id, name, sex)"
     )
     conexao.execute(
         "CREATE TABLE refined.athlete_results AS SELECT * FROM (VALUES "
@@ -254,4 +267,54 @@ def test_evolucao_1906_fica_fora(con):
     assert linhas(
         con,
         "SELECT COUNT(*) FROM marts.evolucao_olimpica WHERE games_id = '1906 Summer'",
+    ) == [(0,)]
+
+
+# --- 04_participacao_genero -------------------------------------------------------
+
+
+def test_participacao_genero_completa(con):
+    assert linhas(
+        con,
+        "SELECT games_id, year, season, sex, atletas, percentual_atletas "
+        "FROM marts.participacao_genero",
+    ) == [
+        ("2012 Summer", 2012, "Summer", "F", 0, Decimal("0.00")),
+        ("2012 Summer", 2012, "Summer", "M", 3, Decimal("100.00")),
+        ("2014 Winter", 2014, "Winter", "F", 2, Decimal("66.67")),
+        ("2014 Winter", 2014, "Winter", "M", 1, Decimal("33.33")),
+        ("2016 Summer", 2016, "Summer", "F", 4, Decimal("36.36")),
+        ("2016 Summer", 2016, "Summer", "M", 7, Decimal("63.64")),
+    ]
+
+
+def test_participacao_edicao_so_com_homens_tem_linha_f_com_zero(con):
+    # Como 1896 nos dados reais: a linha F existe, com 0 atletas e 0%.
+    assert linhas(
+        con,
+        "SELECT atletas, percentual_atletas FROM marts.participacao_genero "
+        "WHERE games_id = '2012 Summer' AND sex = 'F'",
+    ) == [(0, Decimal("0.00"))]
+
+
+def test_participacao_art_competitions_e_1906_ficam_fora(con):
+    # Sem a exclusão, 2016 teria 5 mulheres (a atleta 10 só fez Art).
+    assert linhas(
+        con,
+        "SELECT atletas FROM marts.participacao_genero "
+        "WHERE games_id = '2016 Summer' AND sex = 'F'",
+    ) == [(4,)]
+    assert linhas(
+        con,
+        "SELECT COUNT(*) FROM marts.participacao_genero WHERE games_id = '1906 Summer'",
+    ) == [(0,)]
+
+
+def test_participacao_bate_com_atletas_do_mart_03(con):
+    assert linhas(
+        con,
+        "SELECT COUNT(*) FROM marts.evolucao_olimpica AS e "
+        "JOIN (SELECT games_id, SUM(atletas) AS total "
+        "FROM marts.participacao_genero GROUP BY games_id) AS p USING (games_id) "
+        "WHERE e.atletas <> p.total",
     ) == [(0,)]
