@@ -87,7 +87,7 @@ def gravar(
     schema: str,
     tabela: str,
 ) -> int:
-    """Grava o DataFrame em schema.tabela sem alterar nada e devolve a contagem do banco."""
+    """Grava o df em schema.tabela sem alterar nada; devolve a contagem do banco."""
     destino = f'"{schema}"."{tabela}"'
     con.register(_VIEW_TEMPORARIA, df)
     try:

@@ -1,4 +1,6 @@
-"""Dashboard OlympicScope — Etapa 5 (5.1: estrutura, Medalhas e Países; 5.2: Atletas e Os Jogos).
+"""Dashboard OlympicScope — Etapa 5.
+
+5.1: estrutura, Medalhas e Países; 5.2: Atletas e Os Jogos.
 
 Como rodar: ``uv run streamlit run app/app.py`` (depois do pipeline) e abrir
 http://localhost:8501.

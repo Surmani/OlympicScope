@@ -72,7 +72,8 @@ def test_gravar_preserva_colunas_tipos_e_texto_na(con):
 
     colunas = con.execute(
         "SELECT column_name, data_type FROM information_schema.columns "
-        "WHERE table_schema = 'raw' AND table_name = 'exemplo' ORDER BY ordinal_position"
+        "WHERE table_schema = 'raw' AND table_name = 'exemplo' ORDER BY "
+        "ordinal_position"
     ).fetchall()
     assert colunas == [("Medal", "VARCHAR"), ("Age", "VARCHAR"), ("Inteiro", "BIGINT")]
 

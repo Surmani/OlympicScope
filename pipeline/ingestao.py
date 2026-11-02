@@ -132,7 +132,7 @@ def formatar_milhar(numero: int) -> str:
 
 
 def ingerir() -> dict[str, int]:
-    """Valida os arquivos, grava cada um no schema raw e devolve as contagens do banco."""
+    """Valida os arquivos, grava cada um no schema raw e devolve as contagens."""
     # db.PASTA_RAW é lido na hora da chamada, o que permite aos testes
     # apontá-lo para uma pasta temporária.
     validar_arquivos(db.PASTA_RAW)

@@ -403,7 +403,8 @@ def test_perfil_atleta_com_varias_provas_entra_uma_vez(con):
     # A atleta 7 ganha uma segunda prova de atletismo em 2016: a média e o n
     # do atletismo feminino não podem mudar.
     con.execute(
-        "INSERT INTO refined.events VALUES (6, 'Athletics', 'Athletics Women''s 200 metres')"
+        "INSERT INTO refined.events VALUES (6, 'Athletics', 'Athletics Women''s 200 "
+        "metres')"
     )
     con.execute(
         "INSERT INTO refined.athlete_results "
@@ -551,7 +552,8 @@ def test_estreias_paises_completo(con):
         "primeira_medalha, ano_primeira_medalha, edicoes_ate_primeira_medalha, "
         "primeiro_ouro, ano_primeiro_ouro FROM marts.estreias_paises",
     ) == [
-        ("ARG", "Argentina", "Summer", "2012 Summer", 2012, None, None, None, None, None),
+        ("ARG", "Argentina", "Summer", "2012 Summer", 2012, None, None, None,
+         None, None),
         ("BRA", "Brazil", "Summer", "2012 Summer", 2012, "2012 Summer", 2012, 1,
          "2016 Summer", 2016),
         ("USA", "USA", "Summer", "2012 Summer", 2012, "2012 Summer", 2012, 1,
@@ -764,15 +766,111 @@ def test_medalhistas_extremos_completo(con):
         "SELECT sport, season, extremo, idade, athlete_id, name, sex, noc, games_id, "
         "medalhas, provas FROM marts.medalhistas_extremos",
     ) == [
-        ("Athletics", "Summer", "mais jovem", 22, 7, "A7", "F", "JAM", "2016 Summer", 1, atletismo),
-        ("Athletics", "Summer", "mais velho", 25, 21, "A21", "M", "BRA", "2012 Summer", 1, atletismo),
-        ("Basketball", "Summer", "mais jovem", 20, 1, "A1", "M", "BRA", "2016 Summer", 1, basquete),
-        ("Basketball", "Summer", "mais velho", 29, 6, "A6", "M", "USA", "2016 Summer", 1, basquete),
-        ("Swimming", "Summer", "mais jovem", 19, 11, "A11", "F", "BRA", "2016 Summer", 1, natacao),
-        ("Swimming", "Summer", "mais velho", 21, 13, "A13", "F", "CAN", "2016 Summer", 1, natacao),
-        ("Alpine Skiing", "Winter", "mais jovem", 24, 30, "A30", "F", "CAN", "2014 Winter", 1, esqui),
-        ("Alpine Skiing", "Winter", "mais velho", 28, 31, "A31", "M", "USA", "2014 Winter", 1, esqui),
-    ]  # fmt: skip
+        (
+            "Athletics",
+            "Summer",
+            "mais jovem",
+            22,
+            7,
+            "A7",
+            "F",
+            "JAM",
+            "2016 Summer",
+            1,
+            atletismo,
+        ),
+        (
+            "Athletics",
+            "Summer",
+            "mais velho",
+            25,
+            21,
+            "A21",
+            "M",
+            "BRA",
+            "2012 Summer",
+            1,
+            atletismo,
+        ),
+        (
+            "Basketball",
+            "Summer",
+            "mais jovem",
+            20,
+            1,
+            "A1",
+            "M",
+            "BRA",
+            "2016 Summer",
+            1,
+            basquete,
+        ),
+        (
+            "Basketball",
+            "Summer",
+            "mais velho",
+            29,
+            6,
+            "A6",
+            "M",
+            "USA",
+            "2016 Summer",
+            1,
+            basquete,
+        ),
+        (
+            "Swimming",
+            "Summer",
+            "mais jovem",
+            19,
+            11,
+            "A11",
+            "F",
+            "BRA",
+            "2016 Summer",
+            1,
+            natacao,
+        ),
+        (
+            "Swimming",
+            "Summer",
+            "mais velho",
+            21,
+            13,
+            "A13",
+            "F",
+            "CAN",
+            "2016 Summer",
+            1,
+            natacao,
+        ),
+        (
+            "Alpine Skiing",
+            "Winter",
+            "mais jovem",
+            24,
+            30,
+            "A30",
+            "F",
+            "CAN",
+            "2014 Winter",
+            1,
+            esqui,
+        ),
+        (
+            "Alpine Skiing",
+            "Winter",
+            "mais velho",
+            28,
+            31,
+            "A31",
+            "M",
+            "USA",
+            "2014 Winter",
+            1,
+            esqui,
+        ),
+    ]
 
 
 def test_extremos_empate_mantem_todos(con):
@@ -789,7 +887,8 @@ def test_extremos_empate_mantem_todos(con):
 
 def test_extremos_atleta_com_duas_medalhas_na_mesma_idade_e_uma_linha(con):
     con.execute(
-        "INSERT INTO refined.events VALUES (6, 'Swimming', 'Swimming Women''s 200 metres')"
+        "INSERT INTO refined.events VALUES (6, 'Swimming', 'Swimming Women''s 200 "
+        "metres')"
     )
     con.execute(
         "INSERT INTO refined.athlete_results "
@@ -854,7 +953,8 @@ def test_programa_ausencia_e_modalidade_que_saiu(con):
 
     assert linhas(
         con,
-        "SELECT sport, edicoes, ausencias, no_programa_atual FROM marts.programa_olimpico "
+        "SELECT sport, edicoes, ausencias, no_programa_atual FROM "
+        "marts.programa_olimpico "
         "WHERE sport IN ('Basketball', 'Baseball') ORDER BY sport",
     ) == [("Baseball", 1, 0, False), ("Basketball", 2, 1, True)]
 

@@ -96,7 +96,8 @@ def test_na_continua_texto(ambiente):
     assert ("NA", "NA") in linhas
     nulos = consultar(
         banco,
-        'SELECT COUNT(*) FROM raw.athlete_events WHERE "Age" IS NULL OR "Medal" IS NULL',
+        'SELECT COUNT(*) FROM raw.athlete_events WHERE "Age" IS NULL OR "Medal" IS '
+        "NULL",
     )
     assert nulos == [(0,)]
 

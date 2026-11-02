@@ -108,7 +108,8 @@ def test_noc_regions_sgp_copia_dados_de_sin(con):
 
     assert linhas(
         con,
-        "SELECT noc, region, notes FROM refined.noc_regions WHERE noc IN ('SGP', 'SIN') ORDER BY noc",
+        "SELECT noc, region, notes FROM refined.noc_regions WHERE noc IN ('SGP', "
+        "'SIN') ORDER BY noc",
     ) == [("SGP", "Singapore", None), ("SIN", "Singapore", None)]
 
 
@@ -117,7 +118,8 @@ def test_noc_regions_apara_texto_e_converte_ausencias(con):
 
     assert linhas(
         con,
-        "SELECT noc, region, notes FROM refined.noc_regions WHERE noc IN ('BRA', 'ROT', 'URS') ORDER BY noc",
+        "SELECT noc, region, notes FROM refined.noc_regions WHERE noc IN ('BRA', "
+        "'ROT', 'URS') ORDER BY noc",
     ) == [
         ("BRA", "Brazil", None),
         ("ROT", None, "Refugee Olympic Team"),
@@ -148,7 +150,8 @@ def test_noc_regions_todas_as_colunas_varchar(con):
     tipos = linhas(
         con,
         "SELECT column_name, data_type FROM information_schema.columns "
-        "WHERE table_schema = 'refined' AND table_name = 'noc_regions' ORDER BY ordinal_position",
+        "WHERE table_schema = 'refined' AND table_name = 'noc_regions' ORDER BY "
+        "ordinal_position",
     )
     assert tipos == [("noc", "VARCHAR"), ("region", "VARCHAR"), ("notes", "VARCHAR")]
 
@@ -172,7 +175,8 @@ def test_games_tipos(con):
     tipos = linhas(
         con,
         "SELECT column_name, data_type FROM information_schema.columns "
-        "WHERE table_schema = 'refined' AND table_name = 'games' ORDER BY ordinal_position",
+        "WHERE table_schema = 'refined' AND table_name = 'games' ORDER BY "
+        "ordinal_position",
     )
     assert tipos == [
         ("games_id", "VARCHAR"),
@@ -234,7 +238,8 @@ def test_events_tipos(con):
     tipos = linhas(
         con,
         "SELECT column_name, data_type FROM information_schema.columns "
-        "WHERE table_schema = 'refined' AND table_name = 'events' ORDER BY ordinal_position",
+        "WHERE table_schema = 'refined' AND table_name = 'events' ORDER BY "
+        "ordinal_position",
     )
     assert tipos == [
         ("event_id", "INTEGER"),
@@ -289,7 +294,8 @@ def test_athletes_tipos(con):
     tipos = linhas(
         con,
         "SELECT column_name, data_type FROM information_schema.columns "
-        "WHERE table_schema = 'refined' AND table_name = 'athletes' ORDER BY ordinal_position",
+        "WHERE table_schema = 'refined' AND table_name = 'athletes' ORDER BY "
+        "ordinal_position",
     )
     assert tipos == [("athlete_id", "INTEGER"), ("name", "VARCHAR"), ("sex", "VARCHAR")]
 

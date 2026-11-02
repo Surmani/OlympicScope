@@ -29,7 +29,8 @@ def test_nome_tabela_tira_prefixo():
 
 def test_executa_em_ordem_de_nome(tmp_path, con):
     (tmp_path / "02_segunda.sql").write_text(
-        "CREATE OR REPLACE TABLE refined.segunda AS SELECT COUNT(*) AS n FROM refined.primeira",
+        "CREATE OR REPLACE TABLE refined.segunda AS SELECT COUNT(*) AS n FROM "
+        "refined.primeira",
         encoding="utf-8",
     )
     (tmp_path / "01_primeira.sql").write_text(

@@ -17,6 +17,12 @@ dev = [
 [tool.pytest.ini_options]
 pythonpath = ["."]
 
+[tool.ruff.lint]
+# Além das regras padrão: tamanho de linha (o formatador não quebra textos e
+# SQL longos) e zip() sem strict= (listas de tamanhos diferentes passariam
+# em silêncio).
+extend-select = ["E501", "B905"]
+
 [tool.ruff.lint.isort]
 # Módulos do próprio projeto. Os do app/ são importados sem prefixo porque o
 # `streamlit run app/app.py` coloca a pasta app/ no caminho do Python.
