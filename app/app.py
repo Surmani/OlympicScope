@@ -1,0 +1,70 @@
+"""Dashboard OlympicScope — Etapa 5 (unidade 5.1: estrutura, Medalhas e Países).
+
+Como rodar: ``uv run streamlit run app/app.py`` (depois do pipeline) e abrir
+http://localhost:8501.
+
+Regras e motivos (spec, seção STREAMLIT)
+----------------------------------------
+
+- Lê só o schema ``marts`` e só faz ``SELECT ... WHERE`` (as consultas ficam
+  em ``consultas.py``, testadas). Nenhuma soma, média ou contagem no app.
+  Motivo: cada indicador tem um SQL versionado de onde saiu.
+- Período dos dados sempre visível no topo de todas as páginas.
+  Motivo: o dataset vai só até 2016 (Verão) e 2014 (Inverno); quem abre o
+  painel pode supor que há edições mais recentes.
+- Filtro de temporada no menu lateral, valendo para todas as páginas.
+- Números no padrão brasileiro (``formatacao.py``); altura em metros e peso
+  em quilogramas só na exibição.
+- Se o banco não existir, avisa como gerar e para, sem criar nada.
+  Motivo: um banco vazio na tela parece pipeline quebrado.
+- Gráficos nativos do Streamlit: os eixos saem no formato americano; tabelas
+  e textos, no brasileiro (decisão registrada no README).
+
+Critérios de aceite
+-------------------
+
+1. Sem banco: mensagem com o comando do pipeline, e nada é criado. (manual)
+2. Com banco: as páginas Medalhas e Países abrem, com o período no topo e o
+   filtro de temporada mudando os dados. (manual)
+3. Consultas e formatação: ``tests/test_app_consultas.py`` e
+   ``tests/test_app_formatacao.py``.
+"""
+
+import streamlit as st
+
+import consultas
+from paginas import medalhas, paises
+
+st.set_page_config(page_title="OlympicScope", page_icon="🏅", layout="wide")
+
+TEMPORADAS = {"Verão": "Summer", "Inverno": "Winter"}
+
+st.title("🏅 OlympicScope")
+st.info(
+    "**Período dos dados:** Jogos de Verão de 1896 (Athina) a 2016 (Rio de Janeiro) "
+    "e Jogos de Inverno de 1924 (Chamonix) a 2014 (Sochi). Só os arquivos do "
+    "Kaggle, coletados em 2018: edições posteriores **não estão** aqui. "
+    "Art Competitions e os Jogos de 1906 ficam fora de todos os indicadores."
+)
+
+if not consultas.banco_existe():
+    st.error(
+        f"Banco não encontrado em `{consultas.CAMINHO_BANCO}`. Gere o banco antes:\n\n"
+        "```\nuv run python -m pipeline.ingestao\nuv run python -m pipeline.refined\n"
+        "uv run python -m pipeline.marts\n```"
+    )
+    st.stop()
+
+with st.sidebar:
+    nome_temporada = st.radio("Temporada", list(TEMPORADAS), horizontal=True)
+    st.session_state["season"] = TEMPORADAS[nome_temporada]
+    st.session_state["nome_temporada"] = nome_temporada
+    st.caption("Fonte: 120 Years of Olympic History (Kaggle, CC0).")
+
+navegacao = st.navigation(
+    [
+        st.Page(medalhas.pagina, title="Medalhas", icon="🥇", url_path="medalhas"),
+        st.Page(paises.pagina, title="Países", icon="🌍", url_path="paises"),
+    ]
+)
+navegacao.run()
