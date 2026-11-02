@@ -28,6 +28,13 @@ CONSULTAS = {
     "eficiencia": consultas.eficiencia("2016 Summer", 1),
     "genero_pais": consultas.genero_pais("BRA", "Summer"),
     "perfil_paises": consultas.perfil_paises("Summer", "M", 1),
+    "perfil_modalidades": consultas.perfil_modalidades("Summer", "M", 1),
+    "longevidade": consultas.longevidade(10),
+    "extremos": consultas.extremos("Swimming", "Summer"),
+    "evolucao": consultas.evolucao("Summer"),
+    "participacao_genero": consultas.participacao_genero("Summer"),
+    "desempenho_modalidades": consultas.desempenho_modalidades("Summer"),
+    "programa": consultas.programa("Winter"),
 }
 
 
@@ -119,3 +126,35 @@ def test_eficiencia_respeita_a_delegacao_minima(banco):
 def test_perfil_paises_respeita_o_minimo_de_atletas(banco):
     df = rodar(consultas.perfil_paises("Summer", "M", 3), banco)
     assert df["noc"].tolist() == ["BRA", "USA"]  # ARG tem só 1 altura
+
+
+def test_perfil_modalidades_respeita_sexo_e_minimo(banco):
+    df = rodar(consultas.perfil_modalidades("Summer", "M", 4), banco)
+    assert df["sport"].tolist() == ["Basketball"]  # atletismo M tem 3 alturas
+
+
+def test_extremos_da_modalidade(banco):
+    df = rodar(consultas.extremos("Swimming", "Summer"), banco)
+    assert df[["extremo", "name"]].values.tolist() == [
+        ["mais jovem", "A11"],
+        ["mais velho", "A13"],
+    ]
+
+
+def test_evolucao_e_genero_filtram_a_temporada(banco):
+    assert rodar(consultas.evolucao("Winter"), banco)["games_id"].tolist() == [
+        "2014 Winter"
+    ]
+    assert rodar(consultas.participacao_genero("Winter"), banco)["sex"].tolist() == [
+        "F",
+        "M",
+    ]
+
+
+def test_programa_e_desempenho_filtram_a_temporada(banco):
+    assert rodar(consultas.programa("Winter"), banco)["sport"].tolist() == [
+        "Alpine Skiing"
+    ]
+    assert rodar(consultas.desempenho_modalidades("Summer"), banco)[
+        "sport"
+    ].tolist() == ["Athletics", "Basketball", "Swimming"]

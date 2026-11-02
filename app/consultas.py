@@ -1,4 +1,4 @@
-"""Consultas do dashboard — unidade 5.1.
+"""Consultas do dashboard — unidades 5.1 (Medalhas, Países) e 5.2 (Atletas, Os Jogos).
 
 Cada função devolve uma ``Consulta`` (texto SQL + parâmetros); quem executa é
 ``executar``. Assim os testes rodam exatamente o mesmo SQL sobre marts
@@ -176,4 +176,71 @@ def perfil_paises(season: str, sex: str, minimo_atletas: int) -> Consulta:
         "n_idade, n_altura, n_peso FROM marts.perfil_atletas_pais "
         "WHERE season = ? AND sex = ? AND n_altura >= ? ORDER BY altura_media DESC, noc",
         (season, sex, minimo_atletas),
+    )
+
+
+# --- página Atletas ---------------------------------------------------------------
+
+
+def perfil_modalidades(season: str, sex: str, minimo_atletas: int) -> Consulta:
+    return Consulta(
+        "SELECT sport, idade_media, altura_media, peso_media, n_idade, n_altura, n_peso "
+        "FROM marts.perfil_atletas "
+        "WHERE season = ? AND sex = ? AND n_altura >= ? ORDER BY altura_media DESC, sport",
+        (season, sex, minimo_atletas),
+    )
+
+
+def longevidade(limite: int) -> Consulta:
+    return Consulta(
+        "SELECT ranking, name, sex, noc, edicoes, primeiro_ano, ultimo_ano, "
+        "anos_de_carreira FROM marts.longevidade_atletas "
+        "WHERE ranking <= ? ORDER BY ranking, name",
+        (limite,),
+    )
+
+
+def extremos(sport: str, season: str) -> Consulta:
+    return Consulta(
+        "SELECT extremo, idade, name, sex, noc, games_id, medalhas, provas "
+        "FROM marts.medalhistas_extremos "
+        "WHERE sport = ? AND season = ? ORDER BY extremo, name",
+        (sport, season),
+    )
+
+
+# --- página Os Jogos --------------------------------------------------------------
+
+
+def evolucao(season: str) -> Consulta:
+    return Consulta(
+        "SELECT games_id, year, city, atletas, paises, modalidades, provas "
+        "FROM marts.evolucao_olimpica WHERE season = ? ORDER BY year",
+        (season,),
+    )
+
+
+def participacao_genero(season: str) -> Consulta:
+    return Consulta(
+        "SELECT games_id, year, sex, atletas, percentual_atletas "
+        "FROM marts.participacao_genero WHERE season = ? ORDER BY year, sex",
+        (season,),
+    )
+
+
+def desempenho_modalidades(season: str) -> Consulta:
+    return Consulta(
+        "SELECT sport, participacoes, atletas, provas, medalhas_conquistadas, "
+        "registros_medalhistas FROM marts.desempenho_esportivo "
+        "WHERE season = ? ORDER BY participacoes DESC, sport",
+        (season,),
+    )
+
+
+def programa(season: str) -> Consulta:
+    return Consulta(
+        "SELECT sport, primeira_edicao, primeiro_ano, ultima_edicao, ultimo_ano, "
+        "edicoes, ausencias, no_programa_atual FROM marts.programa_olimpico "
+        "WHERE season = ? ORDER BY primeiro_ano, sport",
+        (season,),
     )
