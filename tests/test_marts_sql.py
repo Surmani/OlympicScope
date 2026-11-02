@@ -21,6 +21,8 @@ def criar_refined_inventada(conexao):
     2012 Summer: 100 m com USA ouro, BRA prata, ARG sem medalha.
     2014 Winter: Downhill com CAN ouro, USA prata, BRA sem medalha.
     1906 Summer: KEN ouro nos 100 m (a edição inteira tem que ser ignorada).
+    Atleta 10 (USA) só fez Art Competitions em 2016; atleta 11 (BRA) fez duas
+    provas em 2016. games_cities: 2016 com duas cidades (como 1956 na H2).
     """
     conexao.execute("CREATE SCHEMA refined")
     conexao.execute(
@@ -37,6 +39,13 @@ def criar_refined_inventada(conexao):
         "('1906 Summer', 1906, 'Summer'), ('2012 Summer', 2012, 'Summer'), "
         "('2014 Winter', 2014, 'Winter'), ('2016 Summer', 2016, 'Summer')"
         ") AS t(games_id, year, season)"
+    )
+    conexao.execute(
+        "CREATE TABLE refined.games_cities AS SELECT * FROM (VALUES "
+        "('1906 Summer', 'Athina'), ('2012 Summer', 'London'), "
+        "('2014 Winter', 'Sochi'), ('2016 Summer', 'Rio de Janeiro'), "
+        "('2016 Summer', 'Belo Horizonte')"
+        ") AS t(games_id, city)"
     )
     conexao.execute(
         "CREATE TABLE refined.noc_regions AS SELECT * FROM (VALUES "
@@ -58,6 +67,7 @@ def criar_refined_inventada(conexao):
         "(9, '2016 Summer', 2, 'ARG', NULL), "
         "(10, '2016 Summer', 3, 'USA', 'Gold'), "
         "(11, '2016 Summer', 4, 'BRA', 'Bronze'), "
+        "(11, '2016 Summer', 2, 'BRA', NULL), "
         "(13, '2016 Summer', 4, 'CAN', 'Bronze'), "
         "(20, '2012 Summer', 2, 'USA', 'Gold'), "
         "(21, '2012 Summer', 2, 'BRA', 'Silver'), "
@@ -206,3 +216,42 @@ def test_quadro_historico_bate_com_o_mart_01(con):
         "(SELECT SUM(edicoes_disputadas) FROM marts.quadro_historico), "
         "(SELECT COUNT(*) FROM marts.medalhas_por_pais_edicao)",
     ) == [(10, 10, 14, 14, 12, 12)]
+
+
+# --- 03_evolucao_olimpica ---------------------------------------------------------
+
+
+def test_evolucao_olimpica_completa(con):
+    assert linhas(
+        con,
+        "SELECT games_id, year, season, city, atletas, paises, modalidades, provas "
+        "FROM marts.evolucao_olimpica",
+    ) == [
+        ("2012 Summer", 2012, "Summer", "London", 3, 3, 1, 1),
+        ("2014 Winter", 2014, "Winter", "Sochi", 3, 3, 1, 1),
+        ("2016 Summer", 2016, "Summer", "Belo Horizonte | Rio de Janeiro", 11, 6, 3, 3),
+    ]
+
+
+def test_evolucao_atleta_em_duas_provas_conta_uma_vez(con):
+    # Atleta 11 fez natação e 100 m em 2016; 12 linhas válidas, 11 atletas.
+    assert linhas(
+        con,
+        "SELECT atletas FROM marts.evolucao_olimpica WHERE games_id = '2016 Summer'",
+    ) == [(11,)]
+
+
+def test_evolucao_art_competitions_fora_das_contagens(con):
+    # Sem a exclusão: 12 atletas (o 10 só fez Art), 4 modalidades, 4 provas.
+    assert linhas(
+        con,
+        "SELECT atletas, modalidades, provas FROM marts.evolucao_olimpica "
+        "WHERE games_id = '2016 Summer'",
+    ) == [(11, 3, 3)]
+
+
+def test_evolucao_1906_fica_fora(con):
+    assert linhas(
+        con,
+        "SELECT COUNT(*) FROM marts.evolucao_olimpica WHERE games_id = '1906 Summer'",
+    ) == [(0,)]
