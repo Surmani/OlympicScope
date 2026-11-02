@@ -1,4 +1,4 @@
-"""Dashboard OlympicScope — Etapa 5 (unidade 5.1: estrutura, Medalhas e Países).
+"""Dashboard OlympicScope — Etapa 5 (5.1: estrutura, Medalhas e Países; 5.2: Atletas e Os Jogos).
 
 Como rodar: ``uv run streamlit run app/app.py`` (depois do pipeline) e abrir
 http://localhost:8501.
@@ -24,8 +24,8 @@ Critérios de aceite
 -------------------
 
 1. Sem banco: mensagem com o comando do pipeline, e nada é criado. (manual)
-2. Com banco: as páginas Medalhas e Países abrem, com o período no topo e o
-   filtro de temporada mudando os dados. (manual)
+2. Com banco: as páginas Medalhas, Países, Atletas e Os Jogos abrem, com o
+   período no topo e o filtro de temporada mudando os dados. (manual)
 3. Consultas e formatação: ``tests/test_app_consultas.py`` e
    ``tests/test_app_formatacao.py``.
 """
@@ -33,7 +33,7 @@ Critérios de aceite
 import streamlit as st
 
 import consultas
-from paginas import medalhas, paises
+from paginas import atletas, jogos, medalhas, paises
 
 st.set_page_config(page_title="OlympicScope", page_icon="🏅", layout="wide")
 
@@ -65,6 +65,8 @@ navegacao = st.navigation(
     [
         st.Page(medalhas.pagina, title="Medalhas", icon="🥇", url_path="medalhas"),
         st.Page(paises.pagina, title="Países", icon="🌍", url_path="paises"),
+        st.Page(atletas.pagina, title="Atletas", icon="🏃", url_path="atletas"),
+        st.Page(jogos.pagina, title="Os Jogos", icon="🏟️", url_path="jogos"),
     ]
 )
 navegacao.run()
