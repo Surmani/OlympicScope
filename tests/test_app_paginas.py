@@ -247,3 +247,46 @@ def test_requirements_txt_bate_com_o_uv_lock():
     assert pacotes(atual) == pacotes(gerado), (
         "requirements.txt desatualizado: rode o comando do topo do arquivo"
     )
+
+
+# --- títulos dos eixos ----------------------------------------------------------
+
+
+def eixos_dos_graficos(at):
+    """(tipo, título) de cada eixo x e y de cada gráfico da página."""
+    import json
+
+    eixos = []
+    for elemento in at.main:
+        if getattr(elemento, "type", "") != "vega_lite_chart":
+            continue
+        spec = json.loads(elemento.proto.spec)
+        codificacao = spec.get("encoding") or spec["layer"][0]["encoding"]
+        eixos += [
+            (codificacao[e].get("type"), codificacao[e].get("title")) for e in "xy"
+        ]
+    return eixos
+
+
+@pytest.mark.parametrize("nome_pagina", PAGINAS)
+def test_eixo_dos_numeros_tem_titulo_e_o_das_categorias_nao(banco, nome_pagina):
+    # Nos gráficos de barra horizontais o Streamlit troca os eixos; o título
+    # tem que cair no eixo dos números, não no dos países/modalidades.
+    at = AppTest.from_function(
+        abrir_pagina,
+        args=(str(PASTA_APP), str(banco), nome_pagina, "Summer", "Verão"),
+        default_timeout=60,
+    )
+    at.run()
+    for controle in at.slider:
+        if "ínimo" in controle.label or "mínima" in controle.label:
+            controle.set_value(1)
+    at.run()
+
+    eixos = eixos_dos_graficos(at)
+    assert eixos, "a página deveria ter pelo menos um gráfico"
+    for tipo, titulo in eixos:
+        if tipo == "quantitative":
+            assert titulo, eixos
+        elif tipo in ("ordinal", "nominal"):
+            assert not titulo, eixos

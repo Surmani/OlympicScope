@@ -41,8 +41,8 @@ def perfil_por_modalidade(season):
         y="altura_media",
         horizontal=True,
         sort="-altura_media",
-        x_label="Altura média (cm)",
-        y_label="",
+        x_label="",
+        y_label="Altura média (cm)",
     )
     mostrar_tabela(
         df,

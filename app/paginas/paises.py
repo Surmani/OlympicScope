@@ -77,8 +77,8 @@ def eficiencia(season):
         y="medalhas_por_100_atletas",
         horizontal=True,
         sort="-medalhas_por_100_atletas",
-        x_label="Medalhas por 100 atletas",
-        y_label="",
+        x_label="",
+        y_label="Medalhas por 100 atletas",
     )
     mostrar_tabela(
         df,

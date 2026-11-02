@@ -51,8 +51,8 @@ def _grafico_medalhas(df, eixo):
         color=CORES_MEDALHAS,
         horizontal=True,
         sort=False,
-        x_label="Medalhas conquistadas",
-        y_label="",
+        x_label="",
+        y_label="Medalhas conquistadas",
     )
 
 
@@ -158,8 +158,8 @@ def dominio_por_modalidade(season):
         y="percentual_medalhas",
         horizontal=True,
         sort="-percentual_medalhas",
-        x_label="% das medalhas da modalidade",
-        y_label="",
+        x_label="",
+        y_label="% das medalhas da modalidade",
     )
     mostrar_tabela(
         df,

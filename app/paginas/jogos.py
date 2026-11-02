@@ -116,8 +116,8 @@ def tamanho_das_modalidades(season):
         y=coluna,
         horizontal=True,
         sort=f"-{coluna}",
-        x_label=nome,
-        y_label="",
+        x_label="",
+        y_label=nome,
     )
     mostrar_tabela(
         df,
