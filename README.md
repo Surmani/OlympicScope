@@ -34,7 +34,7 @@ Os dois arquivos se ligam pela coluna `NOC`.
 | **raw** | cópia fiel dos arquivos de origem, tudo como texto (`raw.athlete_events`: 271.116 linhas; `raw.noc_regions`: 230 linhas) | feito |
 | **refined** | dados tipados, limpos e modelados (dimensões e fato) | feito, com 12 verificações a cada execução: `refined.noc_regions` (231 linhas), `refined.games` (51), `refined.games_cities` (52), `refined.events` (765), `refined.athletes` (135.571), fato `refined.athlete_results` (269.731) |
 | **marts** | indicadores, cada um gerado por um arquivo em `sql/marts/` | feito: 15 marts (os 4 ★ e os 05 a 15), listados em "Indicadores" |
-| **dashboard** | app Streamlit em `app/app.py`, lendo só do schema `marts` | a fazer |
+| **dashboard** | app Streamlit em `app/app.py`, lendo só do schema `marts` | em andamento: páginas Medalhas e Países prontas; Atletas e Os Jogos na unidade 5.2 |
 
 ## Indicadores
 
@@ -122,6 +122,20 @@ marts.programa_olimpico: 68 linhas
 ```
 
 _Os comandos das próximas camadas serão adicionados a cada etapa._
+
+## Dashboard
+
+```bash
+uv run streamlit run app/app.py
+```
+
+Abre em http://localhost:8501. O dashboard só **consulta**: lê o schema `marts` em modo leitura, só com `SELECT ... WHERE` (as consultas estão em [`app/consultas.py`](app/consultas.py), testadas), e mostra os números no padrão brasileiro (altura em metros, peso em kg, vírgula decimal). O período dos dados fica no topo de todas as páginas.
+
+- **Temporada** (Verão ou Inverno) no menu lateral, valendo para todas as páginas.
+- **Medalhas:** quadro por edição e de um país ao longo do tempo, quadro histórico, ranking de atletas e domínio por modalidade.
+- **Países:** estreias, medalhas por 100 atletas, mulheres na delegação e perfil médio dos atletas.
+- Os eixos dos gráficos saem no formato americano (limitação dos gráficos nativos do Streamlit); tabelas e textos, no brasileiro.
+- O banco só fica aberto durante cada consulta, então dá para rodar o pipeline com o dashboard aberto. Os resultados ficam em cache por 1 hora; para ver números novos antes disso, use "Clear cache" no menu do Streamlit.
 
 ## Explorar o banco no navegador
 
@@ -232,6 +246,10 @@ _H4, H5 e `notes` vazio já foram resolvidos em `refined.noc_regions`, H2 em `re
 | Mart 13 | Só atletas com 2 edições ou mais; Verão e Inverno somados; ranking por edições e, no empate, anos de carreira | Quem esteve numa edição só não tem longevidade para mostrar; a carreira olímpica é uma só | 36.770 de 133.179 atletas; máximo de 10 edições (Ian Millar, 1972–2012) |
 | Mart 14 | Todos os empatados ficam; uma linha por atleta em cada extremo, com quantas medalhas ganhou naquela idade e as provas juntas; medalhas sem idade ficam de fora | Escolher um entre atletas da mesma idade seria arbitrário. Toda modalidade tem medalhista com idade | 190 linhas (97 mais jovens, 93 mais velhos); 573 medalhas sem idade fora do mart |
 | Mart 15 | "Programa atual" = última edição do dataset (2016 no Verão, 2014 no Inverno); `ausencias` = edições da temporada, entre a primeira e a última, sem a modalidade | O dataset termina nessas edições; ausências mostram modalidades que saíram e voltaram | 68 modalidades: 49 no programa de 2016/2014, 19 com ausências |
+| Dashboard | Consultas do app separadas da tela (`app/consultas.py`), cada uma com texto SQL fixo e filtros como parâmetro; um teste confere que nenhuma tem `SUM`, `AVG`, `COUNT`, `MIN`, `MAX`, `GROUP BY`, `JOIN` ou janela, nem lê `refined`/`raw` | Garante a regra "só `SELECT ... WHERE` nos marts" com teste, não só com revisão | 12 consultas |
+| Dashboard | Cortes mínimos ajustáveis (padrão 10): delegação mínima na eficiência e mínimo de atletas na média do perfil por país | Amostras pequenas distorcem taxa e média; o corte é um `WHERE`, então a regra do dashboard continua valendo | — |
+| Dashboard | Exibir as 10 primeiras linhas nos gráficos de barras (as tabelas mostram todas) | Gráfico com centenas de barras fica ilegível; as linhas já vêm ordenadas do SQL | — |
+| Estrutura | Configuração mínima do Ruff (`known-first-party`) no `pyproject.toml` | Os módulos do `app/` são importados sem prefixo (o `streamlit run` coloca `app/` no caminho), e o Ruff os misturava com as bibliotecas externas | — |
 | Mart de sede | Não feito (vantagem do país-sede) | Os CSVs só têm a cidade-sede; nenhuma coluna liga cidade a país e nenhuma nota de `noc_regions` cita as 42 cidades. Fazer exigiria dado de fora dos CSVs | — |
 | Origem | Nomes sem letras acentuadas (ex.: `Mnica`, `Rukajrvi`) mantidos como vieram | O `athlete_events.csv` original tem 0 bytes fora do ASCII: os acentos já foram removidos na origem do Kaggle, não na nossa leitura. Não há como recuperar sem inventar dado | nenhuma (nada alterado) |
 | Projeto | Dashboard Streamlit obrigatório (no desafio é opcional) | Decisão do autor: o projeto só está completo com o dashboard lendo os marts | — |
@@ -253,3 +271,5 @@ _Preenchido ao longo do projeto, no momento em que acontece._
 | Mart 02 | No teste que confere se os marts 01 e 02 batem, o valor esperado foi escrito errado (9 medalhas em vez de 10) | O teste falhou; o SQL estava certo e os dois lados da comparação já eram iguais |
 | Mart 02 → 03 | Ao dizer quantas unidades faltavam, a IA contou uma a mais desde a 4.1 (disse 7 quando eram 6) | Recontando a lista de unidades uma a uma, ao responder "faltam quantos?" |
 | Mart 08 | Na proposta e no primeiro comentário do SQL, a IA disse que 319 medalhistas tinham mais de um NOC; o mart mostrou 767. Os 319 eram só os que ganharam medalha por mais de um país; o mart junta os NOCs de todas as participações | Conferindo a contagem do mart nos dados reais, depois de rodar; comentário do SQL e README corrigidos |
+| Rodadas 2 e 4 (consultas de investigação) | Usou `at` como apelido de tabela em consultas avulsas de conferência, e `at` é palavra reservada no DuckDB | As consultas falharam com erro de sintaxe; o apelido foi trocado. Nenhuma delas faz parte do projeto |
+| 5.1 — dashboard | No teste das consultas, criou o banco temporário com o nome `marts.duckdb`; o DuckDB passou a ter um catálogo `marts` que conflita com o schema `marts` | Os testes falharam com "Ambiguous reference to catalog or schema"; o arquivo foi renomeado |
