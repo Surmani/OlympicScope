@@ -30,7 +30,7 @@ Os dois arquivos se ligam pela coluna `NOC`.
 |---|---|---|
 | **raw** | cópia fiel dos arquivos de origem, tudo como texto (`raw.athlete_events`: 271.116 linhas; `raw.noc_regions`: 230 linhas) | feito |
 | **refined** | dados tipados, limpos e modelados (dimensões e fato) | feito, com 12 verificações a cada execução: `refined.noc_regions` (231 linhas), `refined.games` (51), `refined.games_cities` (52), `refined.events` (765), `refined.athletes` (135.571), fato `refined.athlete_results` (269.731) |
-| **marts** | indicadores, cada um gerado por um arquivo em `sql/marts/` | em andamento: 4 marts ★ prontos (`medalhas_por_pais_edicao`, `quadro_historico`, `evolucao_olimpica`, `participacao_genero`) e marts 05 a 10; faltam 11 a 15 |
+| **marts** | indicadores, cada um gerado por um arquivo em `sql/marts/` | em andamento: 4 marts ★ prontos (`medalhas_por_pais_edicao`, `quadro_historico`, `evolucao_olimpica`, `participacao_genero`) e marts 05 a 13; faltam 14 e 15 |
 | **dashboard** | app Streamlit em `app/app.py`, lendo só do schema `marts` | a fazer |
 
 ## Indicadores
@@ -56,6 +56,9 @@ Cada indicador é uma tabela no schema `marts`, gerada por **um** arquivo SQL. O
 | `marts.ranking_atletas` | Quem são os maiores medalhistas individuais? | atleta (só medalhistas) | [`sql/marts/08_ranking_atletas.sql`](sql/marts/08_ranking_atletas.sql) | 27.821 |
 | `marts.estreias_paises` | Quando cada país estreou, e quando ganhou a primeira medalha e o primeiro ouro? | NOC × temporada | [`sql/marts/09_estreias_paises.sql`](sql/marts/09_estreias_paises.sql) | 347 |
 | `marts.eficiencia_paises` | Quantas medalhas cada país conquistou para cada 100 atletas enviados? | NOC × edição | [`sql/marts/10_eficiencia_paises.sql`](sql/marts/10_eficiencia_paises.sql) | 3.803 |
+| `marts.dominio_modalidade` | Quais países mais ganharam em cada modalidade, e com que fatia das medalhas? | modalidade × temporada × NOC (só quem ganhou) | [`sql/marts/11_dominio_modalidade.sql`](sql/marts/11_dominio_modalidade.sql) | 1.433 |
+| `marts.genero_por_pais` | Qual a participação de mulheres na delegação de cada país, por edição? | NOC × edição | [`sql/marts/12_genero_por_pais.sql`](sql/marts/12_genero_por_pais.sql) | 3.803 |
+| `marts.longevidade_atletas` | Quais atletas disputaram mais edições, e por quanto tempo? | atleta (2 edições ou mais) | [`sql/marts/13_longevidade_atletas.sql`](sql/marts/13_longevidade_atletas.sql) | 36.770 |
 
 As médias de idade, altura e peso vêm com `n_idade`, `n_altura` e `n_peso`: quantos atletas × edição entraram em cada média. Altura em centímetros e peso em quilogramas no banco; o dashboard mostra no padrão brasileiro (ex.: 1,75 m e 63,50 kg).
 
@@ -106,6 +109,9 @@ marts.perfil_atletas_pais: 654 linhas
 marts.ranking_atletas: 27.821 linhas
 marts.estreias_paises: 347 linhas
 marts.eficiencia_paises: 3.803 linhas
+marts.dominio_modalidade: 1.433 linhas
+marts.genero_por_pais: 3.803 linhas
+marts.longevidade_atletas: 36.770 linhas
 ```
 
 _Os comandos das próximas camadas serão adicionados a cada etapa._
@@ -214,6 +220,9 @@ _H4, H5 e `notes` vazio já foram resolvidos em `refined.noc_regions`, H2 em `re
 | Mart 08 | `noc` com todos os países que o atleta defendeu, juntos em ordem alfabética (ex.: `GDR \| GER`) | Mostrar só um esconderia parte da carreira | 767 medalhistas com mais de um NOC (319 ganharam medalha por mais de um) |
 | Mart 09 | Lê do mart 01; inclui primeiro ouro além da primeira medalha | Regras e exclusões num lugar só; "quando veio o primeiro ouro" é tão útil quanto a primeira medalha | 347 NOC × temporada: 155 nunca ganharam medalha, 202 nunca ganharam ouro |
 | Mart 10 | Taxa em medalhas por 100 atletas, com 2 casas, e todos os participantes | Por atleta os números ficam pequenos demais para ler. Delegações pequenas distorcem a taxa (1896 AUS: 1 atleta, 3 medalhas = 300); a coluna `atletas` fica para o dashboard filtrar | 3.803 NOC × edição; delegações somam 184.569, igual ao mart 03 |
+| Mart 11 | Só NOCs com medalha na modalidade; prova em grupo conta 1 medalha para o país; `percentual_medalhas` = fatia das medalhas da modalidade | Ranking de domínio não precisa de quem nunca ganhou; proporção compara modalidades de tamanhos diferentes. O arredondamento faz a soma de uma modalidade variar | 1.433 de 3.963 pares modalidade × NOC; 18.534 medalhas, igual ao mart 05; soma dos percentuais de 99,95 a 100,08 |
+| Mart 12 | Todas as delegações, inclusive as sem mulheres (0%) ou sem homens (100%) | É o que o mart quer mostrar | 3.803 delegações: 1.018 sem mulheres, 31 sem homens |
+| Mart 13 | Só atletas com 2 edições ou mais; Verão e Inverno somados; ranking por edições e, no empate, anos de carreira | Quem esteve numa edição só não tem longevidade para mostrar; a carreira olímpica é uma só | 36.770 de 133.179 atletas; máximo de 10 edições (Ian Millar, 1972–2012) |
 | Mart de sede | Não feito (vantagem do país-sede) | Os CSVs só têm a cidade-sede; nenhuma coluna liga cidade a país e nenhuma nota de `noc_regions` cita as 42 cidades. Fazer exigiria dado de fora dos CSVs | — |
 | Origem | Nomes sem letras acentuadas (ex.: `Mnica`, `Rukajrvi`) mantidos como vieram | O `athlete_events.csv` original tem 0 bytes fora do ASCII: os acentos já foram removidos na origem do Kaggle, não na nossa leitura. Não há como recuperar sem inventar dado | nenhuma (nada alterado) |
 | Projeto | Dashboard Streamlit obrigatório (no desafio é opcional) | Decisão do autor: o projeto só está completo com o dashboard lendo os marts | — |
