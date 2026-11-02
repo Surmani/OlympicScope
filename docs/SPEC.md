@@ -263,7 +263,7 @@ O Streamlit só faz `SELECT ... WHERE` nas colunas de filtro. Nada de `SUM`, `AV
 
 #### Marts previstos
 
-Prioridade: os marcados com ★ são o núcleo do projeto; os demais são feitos se houver tempo.
+Os marcados com ★ são o núcleo do projeto. Os marts 05 a 15 foram escolhidos pelo autor depois dos ★ e também são obrigatórios; são feitos em rodadas de até três, cada um com seu teste e seu commit. Grão e colunas abaixo são o ponto de partida; o detalhe de cada um é decidido (e registrado no SQL e no README) na unidade em que ele é feito.
 
 **★ 01_medalhas_por_pais_edicao.sql** → `marts.medalhas_por_pais_edicao`
 - Grão: NOC × edição.
@@ -289,10 +289,44 @@ Prioridade: os marcados com ★ são o núcleo do projeto; os demais são feitos
 - Grão: modalidade × sexo × temporada.
 - Colunas: sport, sex, season, idade_media, altura_media, peso_media, e a quantidade de registros com valor preenchido para cada média (`n_idade`, `n_altura`, `n_peso`), para deixar claro sobre quantos dados a média foi calculada.
 
-**07_ranking_atletas.sql** → `marts.ranking_atletas`
+**07_perfil_atletas_pais.sql** → `marts.perfil_atletas_pais`
+- Grão: NOC × sexo × temporada.
+- Colunas: noc, region, sex, season, idade_media, altura_media, peso_media, n_idade, n_altura, n_peso.
+
+**08_ranking_atletas.sql** → `marts.ranking_atletas`
 - Grão: atleta.
 - Colunas: athlete_id, name, sex, noc, ouro, prata, bronze, total_medalhas, edicoes, ranking.
 - Aqui cada linha com medalha é uma medalha do atleta (correto no nível individual).
+
+**09_estreias_paises.sql** → `marts.estreias_paises`
+- Pergunta: quando cada país participou pela primeira vez e quando ganhou a primeira medalha?
+- Grão: NOC × temporada.
+
+**10_eficiencia_paises.sql** → `marts.eficiencia_paises`
+- Pergunta: quantas medalhas cada país conquistou por atleta enviado?
+- Grão: NOC × edição.
+
+**11_dominio_modalidade.sql** → `marts.dominio_modalidade`
+- Pergunta: quais países mais ganharam em cada modalidade?
+- Grão: modalidade × temporada × NOC, com ranking dentro da modalidade.
+
+**12_genero_por_pais.sql** → `marts.genero_por_pais`
+- Pergunta: qual a participação de mulheres na delegação de cada país, por edição?
+- Grão: NOC × edição.
+
+**13_longevidade_atletas.sql** → `marts.longevidade_atletas`
+- Pergunta: quais atletas disputaram mais edições e por mais tempo?
+- Grão: atleta.
+
+**14_medalhistas_extremos.sql** → `marts.medalhistas_extremos`
+- Pergunta: quem foram os medalhistas mais jovens e mais velhos de cada modalidade?
+- Grão: modalidade × temporada × extremo (mais jovem / mais velho).
+
+**15_programa_olimpico.sql** → `marts.programa_olimpico`
+- Pergunta: quando cada modalidade entrou e saiu dos Jogos?
+- Grão: modalidade × temporada.
+
+**Descartado — vantagem do país-sede.** Os CSVs só informam a cidade-sede (`City`); nenhuma coluna liga cidade a país, e nenhuma nota de `noc_regions` cita as 42 cidades (conferido). Fazer o mart exigiria uma tabela cidade → país vinda de fora dos CSVs, e a regra do projeto é usar só os arquivos de origem.
 
 Cada mart tem no topo um comentário com: pergunta que responde, grão, regras de contagem e exclusões aplicadas.
 
@@ -306,6 +340,7 @@ O desafio trata o dashboard como opcional; neste projeto ele é **obrigatório**
 - Títulos, unidades, legendas e uma frase explicando cada indicador, incluindo a diferença entre medalhas conquistadas e registros de medalhistas.
 - **Valores exibidos no padrão brasileiro**, por funções de formatação com testes (ex.: `formatar_altura(175)` → `"1,75 m"`, `formatar_peso(Decimal("63.5"))` → `"63,50 kg"`, milhar com ponto e decimal com vírgula). A formatação é só de exibição: banco, refined e marts continuam em centímetros e quilogramas.
   Motivo: altura e peso já estão no sistema métrico (cm e kg, conferido na unidade 3.3); o que muda no padrão brasileiro é a forma de mostrar. Converter no banco faria contas sobre valores já arredondados.
+- **Acessível para outras pessoas, só para consulta** (decisão do autor): banco aberto em modo leitura, conexão aberta e fechada a cada consulta, e resultados em `st.cache_data` (compartilhado entre visitantes). Gráficos nativos do Streamlit (os eixos saem no formato americano; tabelas, destaques e textos no brasileiro). A publicação é feita na unidade 6.4.
 
 ## 5. Estrutura de diretórios
 
@@ -491,6 +526,7 @@ Quem clona o repositório tem que chegar aos indicadores só lendo o README.
 **Etapa 4 — MARTS**
 - 4.1 `pipeline/marts.py`.
 - 4.2 Um mart por unidade, começando pelos ★, cada um com seu teste.
+- 4.3 Marts 05 a 15, em rodadas de até três (05–07, 08–10, 11–13, 14–15), cada mart com seu teste e seu commit.
 
 **Etapa 5 — Dashboard (obrigatório)**
 - Streamlit lendo apenas os marts.
@@ -499,6 +535,7 @@ Quem clona o repositório tem que chegar aos indicadores só lendo o README.
 - 6.1 `executar.py` rodando tudo do zero.
 - 6.2 Revisão de testes e Ruff.
 - 6.3 README final, conferido seguindo-o do zero em uma pasta nova.
+- 6.4 Publicação do dashboard para outras pessoas consultarem (a conta no serviço de hospedagem é criada pelo autor).
 
 ## 11. Diretrizes para a IA
 
