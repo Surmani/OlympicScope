@@ -238,3 +238,9 @@ _Preenchido ao longo do projeto, no momento em que acontece._
 | Etapa | O que a IA fez ou assumiu | Como descobri |
 |---|---|---|
 | 1.1 — `pipeline/db.py` | Leu a contagem de `gravar` com `fetchone()`, que no DuckDB 2.x deixa o resultado aberto e trava o próximo uso da mesma conexão | O teste "gravar duas vezes substitui sem duplicar" falhou com `ResourceInUseException`; corrigido para `fetchall()` |
+| 2.4 — `ui.py` | Na verificação manual, o script da IA encerrou só o processo do `uv` e deixou o `python ui.py` filho rodando, segurando o banco | A ingestão rodada logo depois falhou com erro de lock; a IA conferiu que o processo era o `ui.py` e o encerrou. O código entregue não tinha o problema |
+| 3.1 — hipóteses | Duas consultas de `hipoteses.sql` usaram recursos que o DuckDB não suporta (alias junto com subconsulta; `QUALIFY` com `GROUP BY ALL`) | Falharam na primeira execução; corrigidas antes de qualquer número ir para o README |
+| 3.2c — `events` | No teste da saída do `refined.py`, a IA esperava 4 provas nos dados inventados, mas eram 3 (`Swimming 100m` se repetia) | Recontando os dados inventados antes de rodar o teste |
+| Mart 02 | No teste que confere se os marts 01 e 02 batem, o valor esperado foi escrito errado (9 medalhas em vez de 10) | O teste falhou; o SQL estava certo e os dois lados da comparação já eram iguais |
+| Mart 02 → 03 | Ao dizer quantas unidades faltavam, a IA contou uma a mais desde a 4.1 (disse 7 quando eram 6) | Recontando a lista de unidades uma a uma, ao responder "faltam quantos?" |
+| Mart 08 | Na proposta e no primeiro comentário do SQL, a IA disse que 319 medalhistas tinham mais de um NOC; o mart mostrou 767. Os 319 eram só os que ganharam medalha por mais de um país; o mart junta os NOCs de todas as participações | Conferindo a contagem do mart nos dados reais, depois de rodar; comentário do SQL e README corrigidos |
