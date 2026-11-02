@@ -343,6 +343,9 @@ O desafio trata o dashboard como opcional; neste projeto ele é **obrigatório**
 - **Período dos dados sempre visível** (decisão do autor): no topo do app e na legenda dos indicadores que dizem "histórico" ou "atual", deixar claro que os dados vão do Verão de 1896 a 2016 e do Inverno de 1924 a 2014, só dos CSVs de origem, sem edições posteriores.
   Motivo: quem abre o dashboard pode supor que os números incluem as edições mais recentes.
 - **Acessível para outras pessoas, só para consulta** (decisão do autor): banco aberto em modo leitura, conexão aberta e fechada a cada consulta, e resultados em `st.cache_data` (compartilhado entre visitantes). Gráficos nativos do Streamlit (os eixos saem no formato americano; tabelas, destaques e textos no brasileiro). A publicação é feita na unidade 6.4.
+- **Banco na hospedagem** (unidade 6.4): sem banco, o app avisa e para, sem criar nada. **Exceção:** com o secret `gerar_banco_se_faltar = true`, ligado só no painel da hospedagem, o app gera o banco rodando o `executar.py` em outro processo, uma vez por inicialização do servidor (`app/preparo.py`).
+  Motivo: na hospedagem o banco não vem do Git (`data/` é ignorado) e o disco é temporário; versionar um binário de 18 MB que muda a cada execução desfaria a decisão de manter o banco fora do Git.
+- Dependências para a hospedagem em `requirements.txt`, gerado do `uv.lock` com `uv export` (um teste confere que os dois batem).
 
 ## 5. Estrutura de diretórios
 
@@ -381,6 +384,7 @@ olympicscope/
 │   ├── dados.py                  # cache das consultas (st.cache_data)
 │   ├── formatacao.py             # padrão brasileiro (1,75 m; 63,50 kg; 45,03%), testado
 │   ├── componentes.py            # filtros e tabelas usados por mais de uma página
+│   ├── preparo.py                # gera o banco na hospedagem (secret gerar_banco_se_faltar)
 │   └── paginas/                  # uma página por grupo de marts
 ├── docs/
 │   └── SPEC.md                   # este arquivo
@@ -389,6 +393,7 @@ olympicscope/
 ├── .gitignore
 ├── pyproject.toml
 ├── uv.lock
+├── requirements.txt              # gerado do uv.lock, para a hospedagem do dashboard
 └── README.md
 ```
 
