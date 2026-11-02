@@ -623,3 +623,129 @@ def test_eficiencia_delegacao_conta_cada_atleta_uma_vez_e_sem_art(con):
         "SELECT noc, atletas FROM marts.eficiencia_paises "
         "WHERE games_id = '2016 Summer' AND noc IN ('BRA', 'USA') ORDER BY noc",
     ) == [("BRA", 4), ("USA", 3)]
+
+
+# --- 11_dominio_modalidade --------------------------------------------------------
+
+
+def test_dominio_modalidade_completo(con):
+    assert linhas(
+        con,
+        "SELECT sport, season, noc, region, ouro, prata, bronze, "
+        "medalhas_conquistadas, percentual_medalhas, ranking_modalidade "
+        "FROM marts.dominio_modalidade",
+    ) == [
+        ("Athletics", "Summer", "JAM", "Jamaica", 1, 0, 0, 1, D("25.00"), 1),
+        ("Athletics", "Summer", "USA", "USA", 1, 0, 0, 1, D("25.00"), 1),
+        ("Athletics", "Summer", "BRA", "Brazil", 0, 1, 0, 1, D("25.00"), 3),
+        ("Athletics", "Summer", "KEN", "Kenya", 0, 1, 0, 1, D("25.00"), 3),
+        ("Basketball", "Summer", "BRA", "Brazil", 1, 0, 0, 1, D("50.00"), 1),
+        ("Basketball", "Summer", "USA", "USA", 0, 1, 0, 1, D("50.00"), 2),
+        ("Swimming", "Summer", "BRA", "Brazil", 0, 0, 1, 1, D("50.00"), 1),
+        ("Swimming", "Summer", "CAN", "Canada", 0, 0, 1, 1, D("50.00"), 1),
+        ("Alpine Skiing", "Winter", "CAN", "Canada", 1, 0, 0, 1, D("50.00"), 1),
+        ("Alpine Skiing", "Winter", "USA", "USA", 0, 1, 0, 1, D("50.00"), 2),
+    ]
+
+
+def test_dominio_prova_em_grupo_conta_1_medalha_para_o_pais(con):
+    # Basquete: 3 jogadores do BRA com ouro = 1 medalha do BRA.
+    assert linhas(
+        con,
+        "SELECT ouro, medalhas_conquistadas FROM marts.dominio_modalidade "
+        "WHERE sport = 'Basketball' AND noc = 'BRA'",
+    ) == [(1, 1)]
+
+
+def test_dominio_so_quem_ganhou_e_sem_exclusoes(con):
+    # ARG nunca ganhou; Art e o ouro do KEN em 1906 não entram.
+    assert linhas(
+        con,
+        "SELECT COUNT(*) FROM marts.dominio_modalidade "
+        "WHERE noc = 'ARG' OR sport = 'Art Competitions' "
+        "OR (noc = 'KEN' AND ouro > 0)",
+    ) == [(0,)]
+
+
+def test_dominio_percentual_soma_100_por_modalidade(con):
+    assert linhas(
+        con,
+        "SELECT sport, SUM(percentual_medalhas) FROM marts.dominio_modalidade "
+        "GROUP BY sport ORDER BY sport",
+    ) == [
+        ("Alpine Skiing", D("100.00")),
+        ("Athletics", D("100.00")),
+        ("Basketball", D("100.00")),
+        ("Swimming", D("100.00")),
+    ]
+
+
+# --- 12_genero_por_pais -----------------------------------------------------------
+
+
+def test_genero_por_pais_completo(con):
+    assert linhas(
+        con,
+        "SELECT noc, region, games_id, year, season, atletas_f, atletas_m, atletas, "
+        "percentual_mulheres FROM marts.genero_por_pais",
+    ) == [
+        ("ARG", "Argentina", "2012 Summer", 2012, "Summer", 0, 1, 1, D("0.00")),
+        ("BRA", "Brazil", "2012 Summer", 2012, "Summer", 0, 1, 1, D("0.00")),
+        ("USA", "USA", "2012 Summer", 2012, "Summer", 0, 1, 1, D("0.00")),
+        ("BRA", "Brazil", "2014 Winter", 2014, "Winter", 1, 0, 1, D("100.00")),
+        ("CAN", "Canada", "2014 Winter", 2014, "Winter", 1, 0, 1, D("100.00")),
+        ("USA", "USA", "2014 Winter", 2014, "Winter", 0, 1, 1, D("0.00")),
+        ("ARG", "Argentina", "2016 Summer", 2016, "Summer", 0, 1, 1, D("0.00")),
+        ("BRA", "Brazil", "2016 Summer", 2016, "Summer", 1, 3, 4, D("25.00")),
+        ("CAN", "Canada", "2016 Summer", 2016, "Summer", 1, 0, 1, D("100.00")),
+        ("JAM", "Jamaica", "2016 Summer", 2016, "Summer", 1, 0, 1, D("100.00")),
+        ("KEN", "Kenya", "2016 Summer", 2016, "Summer", 1, 0, 1, D("100.00")),
+        ("USA", "USA", "2016 Summer", 2016, "Summer", 0, 3, 3, D("0.00")),
+    ]
+
+
+def test_genero_por_pais_art_fora_e_atleta_em_duas_provas_conta_uma_vez(con):
+    # USA 2016: a atleta 10 (F) só fez Art -> 0 mulheres.
+    # BRA 2016: a atleta 11 fez duas provas -> 1 mulher, não 2.
+    assert linhas(
+        con,
+        "SELECT noc, atletas_f FROM marts.genero_por_pais "
+        "WHERE games_id = '2016 Summer' AND noc IN ('BRA', 'USA') ORDER BY noc",
+    ) == [("BRA", 1), ("USA", 0)]
+
+
+# --- 13_longevidade_atletas -------------------------------------------------------
+
+
+def test_longevidade_sem_atleta_com_2_edicoes_fica_vazio(con):
+    # Na refined inventada básica, todo atleta disputou uma edição só.
+    assert linhas(con, "SELECT COUNT(*) FROM marts.longevidade_atletas") == [(0,)]
+
+
+def test_longevidade_completo(con):
+    inserir_resultado(con, 9, "2012 Summer", 2, "ARG", None)  # 2012 e 2016
+    inserir_resultado(con, 31, "2016 Summer", 2, "CAN", None)  # Inverno e Verão
+    inserir_resultado(con, 21, "2014 Winter", 5, "BRA", None)  # 2012, 2014, 2016
+    inserir_resultado(con, 21, "2016 Summer", 2, "BRA", None)
+
+    assert linhas(
+        con,
+        "SELECT athlete_id, name, sex, noc, edicoes, primeiro_ano, ultimo_ano, "
+        "anos_de_carreira, ranking FROM marts.longevidade_atletas",
+    ) == [
+        (21, "A21", "M", "BRA", 3, 2012, 2016, 4, 1),
+        (9, "A9", "M", "ARG", 2, 2012, 2016, 4, 2),
+        (31, "A31", "M", "CAN | USA", 2, 2014, 2016, 2, 3),
+    ]
+
+
+def test_longevidade_1906_e_art_nao_contam_como_edicao(con):
+    # Atleta 12 (só 1906) ganha uma participação em 2016; a 10 (só Art) ganha
+    # outra prova de Art em 2012. Nenhum dos dois chega a 2 edições válidas.
+    inserir_resultado(con, 12, "2016 Summer", 2, "KEN", None)
+    inserir_resultado(con, 10, "2012 Summer", 3, "USA", None)
+
+    assert linhas(
+        con,
+        "SELECT COUNT(*) FROM marts.longevidade_atletas WHERE athlete_id IN (10, 12)",
+    ) == [(0,)]
