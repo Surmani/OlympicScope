@@ -4,6 +4,9 @@ Pipeline de Engenharia de Dados sobre 120 anos de história olímpica (1896–20
 
 Projeto do desafio final da Trilha de Engenharia de Dados JR.
 
+> **Período dos dados: Jogos de Verão de 1896 (Athina) a 2016 (Rio de Janeiro) e Jogos de Inverno de 1924 (Chamonix) a 2014 (Sochi).**
+> Todos os números vêm só dos dois arquivos CSV do Kaggle, coletados em 2018. Edições posteriores a essas **não estão** no projeto, e nenhum dado foi buscado em outra fonte. Quando um indicador fala em "atual" ou "histórico", é sempre até 2016 (Verão) e 2014 (Inverno).
+
 ## Fonte dos dados
 
 | | |
@@ -30,7 +33,7 @@ Os dois arquivos se ligam pela coluna `NOC`.
 |---|---|---|
 | **raw** | cópia fiel dos arquivos de origem, tudo como texto (`raw.athlete_events`: 271.116 linhas; `raw.noc_regions`: 230 linhas) | feito |
 | **refined** | dados tipados, limpos e modelados (dimensões e fato) | feito, com 12 verificações a cada execução: `refined.noc_regions` (231 linhas), `refined.games` (51), `refined.games_cities` (52), `refined.events` (765), `refined.athletes` (135.571), fato `refined.athlete_results` (269.731) |
-| **marts** | indicadores, cada um gerado por um arquivo em `sql/marts/` | em andamento: 4 marts ★ prontos (`medalhas_por_pais_edicao`, `quadro_historico`, `evolucao_olimpica`, `participacao_genero`) e marts 05 a 13; faltam 14 e 15 |
+| **marts** | indicadores, cada um gerado por um arquivo em `sql/marts/` | feito: 15 marts (os 4 ★ e os 05 a 15), listados em "Indicadores" |
 | **dashboard** | app Streamlit em `app/app.py`, lendo só do schema `marts` | a fazer |
 
 ## Indicadores
@@ -59,6 +62,8 @@ Cada indicador é uma tabela no schema `marts`, gerada por **um** arquivo SQL. O
 | `marts.dominio_modalidade` | Quais países mais ganharam em cada modalidade, e com que fatia das medalhas? | modalidade × temporada × NOC (só quem ganhou) | [`sql/marts/11_dominio_modalidade.sql`](sql/marts/11_dominio_modalidade.sql) | 1.433 |
 | `marts.genero_por_pais` | Qual a participação de mulheres na delegação de cada país, por edição? | NOC × edição | [`sql/marts/12_genero_por_pais.sql`](sql/marts/12_genero_por_pais.sql) | 3.803 |
 | `marts.longevidade_atletas` | Quais atletas disputaram mais edições, e por quanto tempo? | atleta (2 edições ou mais) | [`sql/marts/13_longevidade_atletas.sql`](sql/marts/13_longevidade_atletas.sql) | 36.770 |
+| `marts.medalhistas_extremos` | Quem foram os medalhistas mais jovens e mais velhos de cada modalidade? | modalidade × temporada × extremo × atleta (empatados ficam) | [`sql/marts/14_medalhistas_extremos.sql`](sql/marts/14_medalhistas_extremos.sql) | 190 |
+| `marts.programa_olimpico` | Quando cada modalidade entrou e saiu dos Jogos, e quantas vezes ficou de fora? | modalidade × temporada | [`sql/marts/15_programa_olimpico.sql`](sql/marts/15_programa_olimpico.sql) | 68 |
 
 As médias de idade, altura e peso vêm com `n_idade`, `n_altura` e `n_peso`: quantos atletas × edição entraram em cada média. Altura em centímetros e peso em quilogramas no banco; o dashboard mostra no padrão brasileiro (ex.: 1,75 m e 63,50 kg).
 
@@ -112,6 +117,8 @@ marts.eficiencia_paises: 3.803 linhas
 marts.dominio_modalidade: 1.433 linhas
 marts.genero_por_pais: 3.803 linhas
 marts.longevidade_atletas: 36.770 linhas
+marts.medalhistas_extremos: 190 linhas
+marts.programa_olimpico: 68 linhas
 ```
 
 _Os comandos das próximas camadas serão adicionados a cada etapa._
@@ -223,6 +230,8 @@ _H4, H5 e `notes` vazio já foram resolvidos em `refined.noc_regions`, H2 em `re
 | Mart 11 | Só NOCs com medalha na modalidade; prova em grupo conta 1 medalha para o país; `percentual_medalhas` = fatia das medalhas da modalidade | Ranking de domínio não precisa de quem nunca ganhou; proporção compara modalidades de tamanhos diferentes. O arredondamento faz a soma de uma modalidade variar | 1.433 de 3.963 pares modalidade × NOC; 18.534 medalhas, igual ao mart 05; soma dos percentuais de 99,95 a 100,08 |
 | Mart 12 | Todas as delegações, inclusive as sem mulheres (0%) ou sem homens (100%) | É o que o mart quer mostrar | 3.803 delegações: 1.018 sem mulheres, 31 sem homens |
 | Mart 13 | Só atletas com 2 edições ou mais; Verão e Inverno somados; ranking por edições e, no empate, anos de carreira | Quem esteve numa edição só não tem longevidade para mostrar; a carreira olímpica é uma só | 36.770 de 133.179 atletas; máximo de 10 edições (Ian Millar, 1972–2012) |
+| Mart 14 | Todos os empatados ficam; uma linha por atleta em cada extremo, com quantas medalhas ganhou naquela idade e as provas juntas; medalhas sem idade ficam de fora | Escolher um entre atletas da mesma idade seria arbitrário. Toda modalidade tem medalhista com idade | 190 linhas (97 mais jovens, 93 mais velhos); 573 medalhas sem idade fora do mart |
+| Mart 15 | "Programa atual" = última edição do dataset (2016 no Verão, 2014 no Inverno); `ausencias` = edições da temporada, entre a primeira e a última, sem a modalidade | O dataset termina nessas edições; ausências mostram modalidades que saíram e voltaram | 68 modalidades: 49 no programa de 2016/2014, 19 com ausências |
 | Mart de sede | Não feito (vantagem do país-sede) | Os CSVs só têm a cidade-sede; nenhuma coluna liga cidade a país e nenhuma nota de `noc_regions` cita as 42 cidades. Fazer exigiria dado de fora dos CSVs | — |
 | Origem | Nomes sem letras acentuadas (ex.: `Mnica`, `Rukajrvi`) mantidos como vieram | O `athlete_events.csv` original tem 0 bytes fora do ASCII: os acentos já foram removidos na origem do Kaggle, não na nossa leitura. Não há como recuperar sem inventar dado | nenhuma (nada alterado) |
 | Projeto | Dashboard Streamlit obrigatório (no desafio é opcional) | Decisão do autor: o projeto só está completo com o dashboard lendo os marts | — |
