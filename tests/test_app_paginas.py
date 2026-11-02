@@ -146,3 +146,104 @@ def test_app_sem_banco_avisa_e_nao_cria_nada(tmp_path, consultas_do_app, monkeyp
     assert len(at.header) == 0  # nenhuma página foi aberta
     assert not inexistente.exists()
     assert not inexistente.parent.exists()
+
+
+# --- 6.4: gerar o banco na hospedagem ------------------------------------------------
+
+
+@pytest.fixture
+def preparo_do_app(consultas_do_app):
+    """O módulo preparo como o app o importa, com o cache de recurso limpo."""
+    import importlib
+    import sys
+
+    import streamlit as st
+
+    modulo = importlib.import_module("preparo")
+    st.cache_resource.clear()
+    yield modulo
+    st.cache_resource.clear()
+    sys.modules.pop("preparo", None)
+
+
+def test_app_sem_banco_com_secret_gera_o_banco_e_abre(
+    tmp_path, banco, consultas_do_app, preparo_do_app, monkeypatch
+):
+    import shutil
+    import subprocess
+
+    destino = tmp_path / "data" / "olympics.duckdb"
+    monkeypatch.setattr(consultas_do_app, "CAMINHO_BANCO", destino)
+    chamadas = []
+
+    def pipeline_falso():
+        # No lugar do executar.py real: copia o banco de teste para o destino.
+        chamadas.append(1)
+        destino.parent.mkdir(parents=True)
+        shutil.copy(banco, destino)
+        return subprocess.CompletedProcess([], 0, "verificações: 12 de 12 ok\n", "")
+
+    monkeypatch.setattr(preparo_do_app, "executar_pipeline", pipeline_falso)
+    at = AppTest.from_file(str(PASTA_APP / "app.py"), default_timeout=60)
+    at.secrets["gerar_banco_se_faltar"] = True
+    at.run()
+
+    assert [e.value for e in at.exception] == []
+    assert chamadas == [1]
+    assert destino.exists()
+    assert at.header[0].value == "Medalhas — Jogos de Verão"
+
+    at.run()  # segunda visita no mesmo servidor: não gera de novo
+    assert chamadas == [1]
+
+
+def test_app_geracao_que_falha_mostra_a_saida_e_para(
+    tmp_path, consultas_do_app, preparo_do_app, monkeypatch
+):
+    import subprocess
+
+    monkeypatch.setattr(
+        consultas_do_app, "CAMINHO_BANCO", tmp_path / "data" / "olympics.duckdb"
+    )
+    monkeypatch.setattr(
+        preparo_do_app,
+        "executar_pipeline",
+        lambda: subprocess.CompletedProcess(
+            [], 1, "", "Parou na etapa 2/3: Refined.\n"
+        ),
+    )
+    at = AppTest.from_file(str(PASTA_APP / "app.py"), default_timeout=60)
+    at.secrets["gerar_banco_se_faltar"] = True
+    at.run()
+
+    assert "Não foi possível gerar o banco" in at.error[0].value
+    assert "Parou na etapa 2/3" in at.code[0].value
+    assert len(at.header) == 0
+
+
+def test_sem_secret_a_geracao_fica_desligada(preparo_do_app):
+    assert preparo_do_app.geracao_ligada() is False
+
+
+def test_requirements_txt_bate_com_o_uv_lock():
+    import shutil
+    import subprocess
+
+    if shutil.which("uv") is None:
+        pytest.skip("uv não está no PATH")
+    raiz = PASTA_APP.parent
+    gerado = subprocess.run(
+        [
+            "uv", "export", "--no-dev", "--no-hashes", "--no-emit-project",
+            "--frozen", "--format", "requirements-txt",
+        ],
+        cwd=raiz, capture_output=True, text=True, check=True,
+    ).stdout  # fmt: skip
+
+    def pacotes(texto):
+        return [linha for linha in texto.splitlines() if not linha.startswith("#")]
+
+    atual = (raiz / "requirements.txt").read_text(encoding="utf-8")
+    assert pacotes(atual) == pacotes(gerado), (
+        "requirements.txt desatualizado: rode o comando do topo do arquivo"
+    )

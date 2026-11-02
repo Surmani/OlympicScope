@@ -19,6 +19,9 @@ Regras e motivos (spec, seção STREAMLIT)
   em quilogramas só na exibição.
 - Se o banco não existir, avisa como gerar e para, sem criar nada.
   Motivo: um banco vazio na tela parece pipeline quebrado.
+  Exceção (unidade 6.4): com o secret ``gerar_banco_se_faltar = true``,
+  ligado só na hospedagem, o app gera o banco rodando o ``executar.py``
+  (``preparo.py``), porque lá o disco é temporário e o banco não vem do Git.
 - Gráficos nativos do Streamlit: os eixos saem no formato americano; tabelas
   e textos, no brasileiro (decisão registrada no README).
 
@@ -35,6 +38,7 @@ Critérios de aceite
 import streamlit as st
 
 import consultas
+import preparo
 from paginas import atletas, jogos, medalhas, paises
 
 st.set_page_config(page_title="OlympicScope", page_icon="🏅", layout="wide")
@@ -48,6 +52,16 @@ st.info(
     "Kaggle, coletados em 2018: edições posteriores **não estão** aqui. "
     "Art Competitions e os Jogos de 1906 ficam fora de todos os indicadores."
 )
+
+if not consultas.banco_existe() and preparo.geracao_ligada():
+    with st.spinner(
+        "Preparando os dados (cerca de 10 segundos, só na primeira visita)..."
+    ):
+        codigo, saida = preparo.gerar_banco()
+    if codigo != 0:
+        st.error("Não foi possível gerar o banco. Fim da saída do pipeline:")
+        st.code(saida[-3000:])
+        st.stop()
 
 if not consultas.banco_existe():
     st.error(
