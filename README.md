@@ -18,14 +18,21 @@ Projeto do desafio final da Trilha de Engenharia de Dados JR.
 
 Os arquivos da pasta `raw/` foram baixados do Kaggle pelo link acima e estão versionados neste repositório **sem nenhuma alteração**. A licença CC0 permite a redistribuição, e assim o projeto roda sem precisar de conta no Kaggle.
 
-### O que é uma linha de cada arquivo
+### O que é uma linha de cada tabela
 
-| Arquivo | Uma linha é... |
-|---|---|
-| `raw/athlete_events.csv` | um atleta em uma prova em uma edição dos Jogos |
-| `raw/noc_regions.csv` | um código de Comitê Olímpico Nacional (NOC) e a região/país dele |
+| Camada | Tabela | Uma linha é... |
+|---|---|---|
+| raw | `raw.athlete_events` (arquivo `raw/athlete_events.csv`) | um atleta em uma prova em uma edição dos Jogos, exatamente como no arquivo |
+| raw | `raw.noc_regions` (arquivo `raw/noc_regions.csv`) | um código de Comitê Olímpico Nacional (NOC) e a região/país dele, como no arquivo |
+| refined | `refined.noc_regions` | um NOC, com região e observações (inclui `SGP`, ver decisões) |
+| refined | `refined.games` | uma edição dos Jogos (ex.: `1992 Summer`), com ano e temporada |
+| refined | `refined.games_cities` | um par edição × cidade-sede (1956 Summer tem duas) |
+| refined | `refined.events` | uma prova (par modalidade + prova), com `event_id` |
+| refined | `refined.athletes` | um atleta, com nome e sexo |
+| refined | `refined.athlete_results` (fato) | uma participação registrada de um atleta em uma prova de uma edição, com idade, altura, peso e medalha daquela participação |
+| marts | 15 tabelas `marts.*` | depende do mart: o grão de cada um está na coluna "Grão" em [Indicadores](#indicadores) |
 
-Os dois arquivos se ligam pela coluna `NOC`.
+Os dois arquivos de origem se ligam pela coluna `NOC`. Na refined, a fato se liga às dimensões por `athlete_id`, `games_id`, `event_id` e `noc`.
 
 ## Camadas
 
@@ -113,6 +120,8 @@ uv run streamlit run app/app.py
 ```
 
 Abra **http://localhost:8501** no navegador. Para parar, `Ctrl+C` no terminal.
+
+> **Conferido do zero:** em 02/11/2026 este passo a passo foi seguido numa pasta vazia, a partir do `git clone` do GitHub, com uv 0.13.5 no Windows: `uv sync` instalou tudo, `executar.py` terminou com as mesmas contagens desta página e 12 de 12 verificações, `pytest` passou 242 testes, `ruff check` passou, e o dashboard abriu.
 
 ### Problemas comuns
 
@@ -243,16 +252,20 @@ Quantos valores de cada coluna são o texto `NA` ou texto vazio `''`. As colunas
 
 Em `athlete_events`, a ausência aparece só como `NA`, e só nas quatro colunas que a spec já citava. Em `noc_regions`, `notes` vazio aparece como `''` (209 de 230 linhas), e `region` tem 3 `NA`.
 
-### Pontos que ficam para as próximas unidades
+### O que cada hipótese virou
 
-- **H1 (duplicatas):** decidir na tabela fato (3.3) se as 1.385 linhas em excesso saem, sabendo que quase todas são de `Art Competitions`, que os marts já excluem.
-- **H2 (1956 com duas cidades):** pela spec, essa dúvida é apresentada antes de criar `refined.games` (3.2), com duas opções: uma tabela de cidades separada ou a cidade fora da dimensão.
-- **H4 (`SGP` × `SIN`):** decidir na `refined.noc_regions` (3.2) como ligar as 349 linhas de `SGP`, porque hoje elas ficariam sem região.
-- **H5 (`region = 'NA'`):** na refined, esses 3 viram nulo e deixam de parecer uma região chamada "NA".
-- **H8:** `Weight` precisa de um tipo com decimais; `Height` cabe em inteiro. O tipo é definido na fato (3.3).
-- **`notes` vazio:** decidir na `refined.noc_regions` se `''` vira nulo, como o `NA`.
+Detalhes, motivos e linhas afetadas em [Decisões sobre o dado](#decisões-sobre-o-dado).
 
-_H4, H5 e `notes` vazio já foram resolvidos em `refined.noc_regions`, H2 em `refined.games` / `refined.games_cities`, e H1 e H8 em `refined.athlete_results` (ver "Decisões sobre o dado")._
+| Hipótese | Decisão | Onde |
+|---|---|---|
+| H1 (duplicatas) | As 1.385 linhas idênticas saem; repetições com medalha ou time diferente ficam | `refined.athlete_results` |
+| H2 (1956 com duas cidades) | Cidade fora de `refined.games`, numa tabela própria | `refined.games_cities` |
+| H3 (ID com dois nomes ou sexos) | Não aconteceu: um ID = um atleta | `refined.athletes` |
+| H4 (`SGP` × `SIN`) | Linha `SGP → Singapore` acrescentada, mantendo `SIN` | `refined.noc_regions` |
+| H5 (NOCs da mesma região; `region = 'NA'`) | NOCs históricos ficam separados; os 3 `NA` viram NULL | `refined.noc_regions` e todos os marts |
+| H6 e H7 (Art Competitions; 1906) | Ficam na refined e saem de todos os marts | todos os marts |
+| H8 (decimais) | `height` INTEGER; `weight` DECIMAL(5,2) | `refined.athlete_results` |
+| `notes` vazio | `''` vira NULL | `refined.noc_regions` |
 
 ## Decisões sobre o dado
 
@@ -316,6 +329,8 @@ _H4, H5 e `notes` vazio já foram resolvidos em `refined.noc_regions`, H2 em `re
 ## Documentação
 
 - [`docs/SPEC.md`](docs/SPEC.md): especificação completa do projeto (arquitetura, modelo de dados, regras de contagem e fluxo de desenvolvimento).
+- [`CLAUDE.md`](CLAUDE.md): instruções que a IA seguiu durante o projeto (fluxo de cada unidade, o que era proibido, estado atual).
+- Cada arquivo de código e cada SQL tem no topo a regra que aplica, o motivo e os critérios de aceite.
 
 ## Onde a IA errou (e como descobri)
 
@@ -336,3 +351,5 @@ _Preenchido ao longo do projeto, no momento em que acontece._
 | 5.2 — filtro de medalha (verificação) | Ao conferir se o Brasil saía da lista, procurou `"BRA"` nas opções, mas o simulador devolve o texto da tela (`"BRA — Brazil"`), e o resultado deu falso nos dois casos | O caso com a caixa desmarcada deveria ter o Brasil; refeito procurando o texto completo, o filtro estava certo |
 | 5.1 — `consultas.py` | `executar()` e `banco_existe()` fixavam o caminho do banco na definição da função, o que impedia testar as páginas sem abrir o banco real | Ao escrever o teste das páginas na 6.2; passaram a ler o caminho na hora da chamada, como o `db.py` |
 | 5.1/5.2 — páginas | Quando um filtro deixava o resultado vazio (ex.: corte de delegação mínima alto), a página montava um gráfico sem dados | O teste de fumaça da 6.2 mostrou um aviso do Altair; agora a página mostra "Nenhum dado com esses filtros" |
+| 6.2 — commits | Sugeriu uma mensagem de commit com o tipo `style`, que não está na lista de tipos da spec, e só avisou depois de sugerir | O commit `bf48cad` foi publicado como `style(lint)`; para não reescrever histórico publicado, ficou como exceção, e o CLAUDE.md passou a lembrar a lista de tipos |
+| 6.3 — README | O README não dizia o que é uma linha das 6 tabelas da refined, exigência da spec (seção 9), e mantinha uma seção "pontos para as próximas unidades" já resolvida | Conferindo o README contra a spec, item por item, depois de seguir o passo a passo do zero |
