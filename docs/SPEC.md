@@ -376,7 +376,12 @@ olympicscope/
 │       └── 07_ranking_atletas.sql
 ├── tests/
 ├── app/
-│   └── app.py                    # Streamlit (obrigatório)
+│   ├── app.py                    # Streamlit (obrigatório): menu, temporada, período no topo
+│   ├── consultas.py              # SQL do app (só SELECT ... WHERE em marts), testado
+│   ├── dados.py                  # cache das consultas (st.cache_data)
+│   ├── formatacao.py             # padrão brasileiro (1,75 m; 63,50 kg; 45,03%), testado
+│   ├── componentes.py            # filtros e tabelas usados por mais de uma página
+│   └── paginas/                  # uma página por grupo de marts
 ├── docs/
 │   └── SPEC.md                   # este arquivo
 ├── executar.py                   # reconstrói tudo do zero: ingestão → refined → marts
