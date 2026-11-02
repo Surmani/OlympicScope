@@ -11,13 +11,13 @@ Responda sempre em português.
 
 ## Estado atual
 
-Concluídas e commitadas: unidades 0.1 (estrutura uv e .gitignore), 0.2 (arquivos originais em raw/), 0.3 (README e docs/SPEC.md), 1.1 (`pipeline/db.py` com testes), 2.1 (validação dos arquivos de origem em `pipeline/ingestao.py`), 2.2 (leitura dos CSVs como texto e criação das tabelas raw), 2.3 (conferência das contagens e registro no README), 2.4 (`ui.py`, explorador somente leitura), 3.1 (hipóteses H1–H8 em `sql/investigacao/hipoteses.sql` e no README), 3.2a (`pipeline/refined.py` e `refined.noc_regions`), 3.2b (`refined.games` e `refined.games_cities`), 3.2c (`refined.events`), 3.2d (`refined.athletes`), 3.3 (fato `refined.athlete_results`), 3.4 (12 verificações em `sql/verificacoes/refined.sql`), 4.1 (`pipeline/marts.py` e `pipeline/executor_sql.py`), 4.2 (mart ★ 01_medalhas_por_pais_edicao), mart ★ 02_quadro_historico, mart ★ 03_evolucao_olimpica, mart ★ 04_participacao_genero, rodadas 1 a 4 da 4.3 (marts 05 a 15), 5.1, 5.2 (dashboard com as 4 páginas), 6.1 (`executar.py`, reconstrução do zero), 6.2 (revisão: testes das páginas, cobertura 96%, Ruff com E501 e B905) e 6.3 (README conferido do zero a partir do clone do GitHub). Etapas 2 a 5 fechadas: 15 marts e dashboard prontos.
+Concluídas e commitadas: unidades 0.1 (estrutura uv e .gitignore), 0.2 (arquivos originais em raw/), 0.3 (README e docs/SPEC.md), 1.1 (`pipeline/db.py` com testes), 2.1 (validação dos arquivos de origem em `pipeline/ingestao.py`), 2.2 (leitura dos CSVs como texto e criação das tabelas raw), 2.3 (conferência das contagens e registro no README), 2.4 (`ui.py`, explorador somente leitura), 3.1 (hipóteses H1–H8 em `sql/investigacao/hipoteses.sql` e no README), 3.2a (`pipeline/refined.py` e `refined.noc_regions`), 3.2b (`refined.games` e `refined.games_cities`), 3.2c (`refined.events`), 3.2d (`refined.athletes`), 3.3 (fato `refined.athlete_results`), 3.4 (12 verificações em `sql/verificacoes/refined.sql`), 4.1 (`pipeline/marts.py` e `pipeline/executor_sql.py`), 4.2 (mart ★ 01_medalhas_por_pais_edicao), mart ★ 02_quadro_historico, mart ★ 03_evolucao_olimpica, mart ★ 04_participacao_genero, rodadas 1 a 4 da 4.3 (marts 05 a 15), 5.1, 5.2 (dashboard com as 4 páginas), 6.1 (`executar.py`, reconstrução do zero), 6.2 (revisão: testes das páginas, cobertura 96%, Ruff com E501 e B905), 6.3 (README conferido do zero a partir do clone do GitHub) e 6.4 (publicação em https://olympicscope.streamlit.app). **Todas as etapas da spec (0 a 6) concluídas.**
 
 O Streamlit é obrigatório neste projeto (decisão do usuário, já na spec).
 
 A 3.2 foi dividida em quatro unidades: 3.2a `noc_regions`, 3.2b `games`, 3.2c `events`, 3.2d `athletes`.
 
-Próxima: **unidade 6.4 — publicação do dashboard**, a última (6.4 = publicação no Streamlit Community Cloud; a conta é do usuário).
+Próxima: nenhuma unidade da spec pendente. Novos pedidos do usuário (ajustes depois de testar) seguem o mesmo fluxo de unidade. O app publicado atualiza sozinho a cada push na `main` (conta do Streamlit Community Cloud é do usuário).
 
 O usuário vai testar o dashboard e pedir ajustes; aplicar quando ele mandar.
 
