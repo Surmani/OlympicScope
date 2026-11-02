@@ -1,5 +1,7 @@
 # 🏅 OlympicScope
 
+**Dashboard online: https://olympicscope.streamlit.app**
+
 Pipeline de Engenharia de Dados sobre 120 anos de história olímpica (1896–2016): do arquivo de origem até os indicadores, em camadas **raw → refined → marts → dashboard Streamlit**, com Python, DuckDB, SQL e testes.
 
 Projeto do desafio final da Trilha de Engenharia de Dados JR.
@@ -41,7 +43,7 @@ Os dois arquivos de origem se ligam pela coluna `NOC`. Na refined, a fato se lig
 | **raw** | cópia fiel dos arquivos de origem, tudo como texto (`raw.athlete_events`: 271.116 linhas; `raw.noc_regions`: 230 linhas) | feito |
 | **refined** | dados tipados, limpos e modelados (dimensões e fato) | feito, com 12 verificações a cada execução: `refined.noc_regions` (231 linhas), `refined.games` (51), `refined.games_cities` (52), `refined.events` (765), `refined.athletes` (135.571), fato `refined.athlete_results` (269.731) |
 | **marts** | indicadores, cada um gerado por um arquivo em `sql/marts/` | feito: 15 marts (os 4 ★ e os 05 a 15), listados em "Indicadores" |
-| **dashboard** | app Streamlit em `app/app.py`, lendo só do schema `marts` | feito: 4 páginas (Medalhas, Países, Atletas, Os Jogos) com os 15 marts; publicação na unidade 6.4 |
+| **dashboard** | app Streamlit em `app/app.py`, lendo só do schema `marts` | feito e publicado em https://olympicscope.streamlit.app: 4 páginas (Medalhas, Países, Atletas, Os Jogos) com os 15 marts |
 
 ## Indicadores
 
@@ -202,7 +204,7 @@ Abre em http://localhost:8501. O dashboard só **consulta**: lê o schema `marts
 
 ### Dashboard online
 
-> **Link:** _a preencher depois da publicação no Streamlit Community Cloud._
+> **Link: https://olympicscope.streamlit.app**
 
 - Só consulta: ninguém altera nada pela tela.
 - No plano gratuito, o app **dorme** depois de um tempo sem visitas. Quem chegar nesse momento clica no botão para acordá-lo e espera um pouco.
@@ -370,3 +372,5 @@ _Preenchido ao longo do projeto, no momento em que acontece._
 | 5.1/5.2 — páginas | Quando um filtro deixava o resultado vazio (ex.: corte de delegação mínima alto), a página montava um gráfico sem dados | O teste de fumaça da 6.2 mostrou um aviso do Altair; agora a página mostra "Nenhum dado com esses filtros" |
 | 6.2 — commits | Sugeriu uma mensagem de commit com o tipo `style`, que não está na lista de tipos da spec, e só avisou depois de sugerir | O commit `bf48cad` foi publicado como `style(lint)`; para não reescrever histórico publicado, ficou como exceção, e o CLAUDE.md passou a lembrar a lista de tipos |
 | 6.3 — README | O README não dizia o que é uma linha das 6 tabelas da refined, exigência da spec (seção 9), e mantinha uma seção "pontos para as próximas unidades" já resolvida | Conferindo o README contra a spec, item por item, depois de seguir o passo a passo do zero |
+| 6.4 — `preparo.py` | Na primeira versão, capturou qualquer exceção (`except Exception`) ao ler os secrets e deixou o `subprocess.run` sem `check=` explícito | O Ruff apontou os dois; agora só o erro de secrets ausente do Streamlit é capturado, e `check=False` está explícito |
+| 5.1/5.2 — gráficos | Nos 5 gráficos de barra horizontais, passou o título dos números como `x_label`; no modo horizontal o Streamlit troca os eixos, e o título "Medalhas conquistadas" aparecia ao lado dos países | Pelo print do usuário no app publicado; corrigido, conferido na especificação do gráfico e coberto por um teste que falha com os rótulos antigos |
