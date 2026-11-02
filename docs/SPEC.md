@@ -490,6 +490,7 @@ data/
 __pycache__/
 .pytest_cache/
 .ruff_cache/
+.coverage
 
 # Streamlit
 .streamlit/secrets.toml
