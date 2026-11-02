@@ -477,3 +477,149 @@ def test_perfil_pais_exclusoes(con):
         "SELECT COUNT(*) FROM marts.perfil_atletas_pais "
         "WHERE (noc = 'USA' AND sex = 'F') OR (noc = 'KEN' AND sex = 'M')",
     ) == [(0,)]
+
+
+def inserir_resultado(con, athlete_id, games_id, event_id, noc, medal):
+    """Acrescenta uma participação na refined inventada e refaz os marts."""
+    con.execute(
+        "INSERT INTO refined.athlete_results VALUES (?, ?, ?, ?, ?, 25, 180, 75)",
+        [athlete_id, games_id, event_id, noc, medal],
+    )
+    executor_sql.executar(con, marts.PASTA_SQL, "marts")
+
+
+# --- 08_ranking_atletas -----------------------------------------------------------
+
+
+def test_ranking_atletas_completo(con):
+    assert linhas(
+        con,
+        "SELECT athlete_id, name, sex, noc, ouro, prata, bronze, total_medalhas, "
+        "edicoes, ranking FROM marts.ranking_atletas",
+    ) == [
+        (1, "A1", "M", "BRA", 1, 0, 0, 1, 1, 1),
+        (2, "A2", "M", "BRA", 1, 0, 0, 1, 1, 1),
+        (3, "A3", "M", "BRA", 1, 0, 0, 1, 1, 1),
+        (7, "A7", "F", "JAM", 1, 0, 0, 1, 1, 1),
+        (20, "A20", "M", "USA", 1, 0, 0, 1, 1, 1),
+        (30, "A30", "F", "CAN", 1, 0, 0, 1, 1, 1),
+        (4, "A4", "M", "USA", 0, 1, 0, 1, 1, 7),
+        (5, "A5", "M", "USA", 0, 1, 0, 1, 1, 7),
+        (6, "A6", "M", "USA", 0, 1, 0, 1, 1, 7),
+        (8, "A8", "F", "KEN", 0, 1, 0, 1, 1, 7),
+        (21, "A21", "M", "BRA", 0, 1, 0, 1, 1, 7),
+        (31, "A31", "M", "USA", 0, 1, 0, 1, 1, 7),
+        (11, "A11", "F", "BRA", 0, 0, 1, 1, 1, 13),
+        (13, "A13", "F", "CAN", 0, 0, 1, 1, 1, 13),
+    ]
+
+
+def test_ranking_so_medalhistas_e_sem_exclusoes(con):
+    # 9, 22 e 32 nunca ganharam medalha; 10 só em Art; 12 só em 1906.
+    assert linhas(
+        con,
+        "SELECT COUNT(*) FROM marts.ranking_atletas "
+        "WHERE athlete_id IN (9, 22, 32, 10, 12)",
+    ) == [(0,)]
+
+
+def test_ranking_cada_jogador_do_time_tem_sua_medalha(con):
+    # Os 3 jogadores do basquete do BRA têm 1 ouro cada.
+    assert linhas(
+        con, "SELECT SUM(ouro) FROM marts.ranking_atletas WHERE athlete_id IN (1, 2, 3)"
+    ) == [(3,)]
+
+
+def test_ranking_atleta_com_dois_paises_e_duas_edicoes(con):
+    # Atleta 4 (prata pelo USA em 2016) ganha ouro pelo CAN em 2012.
+    inserir_resultado(con, 4, "2012 Summer", 2, "CAN", "Gold")
+
+    assert linhas(
+        con,
+        "SELECT noc, ouro, prata, total_medalhas, edicoes, ranking "
+        "FROM marts.ranking_atletas WHERE athlete_id = 4",
+    ) == [("CAN | USA", 1, 1, 2, 2, 1)]
+
+
+# --- 09_estreias_paises -----------------------------------------------------------
+
+
+def test_estreias_paises_completo(con):
+    assert linhas(
+        con,
+        "SELECT noc, region, season, primeira_edicao, ano_primeira_edicao, "
+        "primeira_medalha, ano_primeira_medalha, edicoes_ate_primeira_medalha, "
+        "primeiro_ouro, ano_primeiro_ouro FROM marts.estreias_paises",
+    ) == [
+        ("ARG", "Argentina", "Summer", "2012 Summer", 2012, None, None, None, None, None),
+        ("BRA", "Brazil", "Summer", "2012 Summer", 2012, "2012 Summer", 2012, 1,
+         "2016 Summer", 2016),
+        ("USA", "USA", "Summer", "2012 Summer", 2012, "2012 Summer", 2012, 1,
+         "2012 Summer", 2012),
+        ("CAN", "Canada", "Summer", "2016 Summer", 2016, "2016 Summer", 2016, 1,
+         None, None),
+        ("JAM", "Jamaica", "Summer", "2016 Summer", 2016, "2016 Summer", 2016, 1,
+         "2016 Summer", 2016),
+        ("KEN", "Kenya", "Summer", "2016 Summer", 2016, "2016 Summer", 2016, 1,
+         None, None),
+        ("BRA", "Brazil", "Winter", "2014 Winter", 2014, None, None, None, None, None),
+        ("CAN", "Canada", "Winter", "2014 Winter", 2014, "2014 Winter", 2014, 1,
+         "2014 Winter", 2014),
+        ("USA", "USA", "Winter", "2014 Winter", 2014, "2014 Winter", 2014, 1,
+         None, None),
+    ]  # fmt: skip
+
+
+def test_estreias_primeira_medalha_na_segunda_edicao(con):
+    # ARG estreou em 2012 sem medalha e ganha bronze em 2016: 2 edições até
+    # a primeira medalha.
+    inserir_resultado(con, 9, "2016 Summer", 4, "ARG", "Bronze")
+
+    assert linhas(
+        con,
+        "SELECT primeira_medalha, edicoes_ate_primeira_medalha, primeiro_ouro "
+        "FROM marts.estreias_paises WHERE noc = 'ARG'",
+    ) == [("2016 Summer", 2, None)]
+
+
+def test_estreias_ouro_de_1906_nao_conta(con):
+    # KEN tem ouro só em 1906: estreia em 2016 e sem primeiro ouro.
+    assert linhas(
+        con,
+        "SELECT primeira_edicao, primeiro_ouro FROM marts.estreias_paises "
+        "WHERE noc = 'KEN'",
+    ) == [("2016 Summer", None)]
+
+
+# --- 10_eficiencia_paises ---------------------------------------------------------
+
+
+def test_eficiencia_paises_completo(con):
+    assert linhas(
+        con,
+        "SELECT noc, region, games_id, year, season, atletas, medalhas_conquistadas, "
+        "medalhas_por_100_atletas FROM marts.eficiencia_paises",
+    ) == [
+        ("ARG", "Argentina", "2012 Summer", 2012, "Summer", 1, 0, D("0.00")),
+        ("BRA", "Brazil", "2012 Summer", 2012, "Summer", 1, 1, D("100.00")),
+        ("USA", "USA", "2012 Summer", 2012, "Summer", 1, 1, D("100.00")),
+        ("BRA", "Brazil", "2014 Winter", 2014, "Winter", 1, 0, D("0.00")),
+        ("CAN", "Canada", "2014 Winter", 2014, "Winter", 1, 1, D("100.00")),
+        ("USA", "USA", "2014 Winter", 2014, "Winter", 1, 1, D("100.00")),
+        ("ARG", "Argentina", "2016 Summer", 2016, "Summer", 1, 0, D("0.00")),
+        ("BRA", "Brazil", "2016 Summer", 2016, "Summer", 4, 2, D("50.00")),
+        ("CAN", "Canada", "2016 Summer", 2016, "Summer", 1, 1, D("100.00")),
+        ("JAM", "Jamaica", "2016 Summer", 2016, "Summer", 1, 1, D("100.00")),
+        ("KEN", "Kenya", "2016 Summer", 2016, "Summer", 1, 1, D("100.00")),
+        ("USA", "USA", "2016 Summer", 2016, "Summer", 3, 1, D("33.33")),
+    ]
+
+
+def test_eficiencia_delegacao_conta_cada_atleta_uma_vez_e_sem_art(con):
+    # BRA 2016: atletas 1, 2, 3 e 11 (o 11 em duas provas) = 4.
+    # USA 2016: atletas 4, 5 e 6; a 10, só de Art Competitions, não conta.
+    assert linhas(
+        con,
+        "SELECT noc, atletas FROM marts.eficiencia_paises "
+        "WHERE games_id = '2016 Summer' AND noc IN ('BRA', 'USA') ORDER BY noc",
+    ) == [("BRA", 4), ("USA", 3)]
