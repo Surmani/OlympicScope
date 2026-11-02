@@ -69,16 +69,59 @@ As médias de idade, altura e peso vêm com `n_idade`, `n_altura` e `n_peso`: qu
 
 ## Como rodar do zero
 
-Pré-requisito: [uv](https://docs.astral.sh/uv/) instalado.
+### 1. O que precisa estar instalado
+
+| Programa | Para quê | Como instalar |
+|---|---|---|
+| **Git** | baixar o repositório | [git-scm.com/downloads](https://git-scm.com/downloads). Sem Git, dá para baixar o ZIP pelo botão **Code → Download ZIP** no GitHub e pular o `git clone`. |
+| **uv** | instalar o Python certo e as bibliotecas do projeto | Windows (PowerShell): `powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 \| iex"`<br>macOS/Linux: `curl -LsSf https://astral.sh/uv/install.sh \| sh`<br>Mais opções: [docs.astral.sh/uv](https://docs.astral.sh/uv/getting-started/installation/) |
+| **Python 3.13** | rodar o projeto | **Não precisa instalar à parte**: se faltar, o `uv sync` baixa o Python 3.13 sozinho, só para este projeto. |
+
+Depois de instalar o uv, feche e abra o terminal de novo, e confira com `uv --version`.
+
+### 2. Baixar e preparar
 
 ```bash
 git clone https://github.com/Surmani/OlympicScope.git
 cd OlympicScope
 uv sync
-uv run python executar.py            # reconstrói tudo do zero: ingestão → refined → marts
-uv run pytest                        # testes (não usam o banco real)
-uv run streamlit run app/app.py      # dashboard em http://localhost:8501
 ```
+
+O `uv sync` cria a pasta `.venv/` com o Python e as bibliotecas (DuckDB, pandas, Streamlit, pytest, Ruff) nas versões travadas no `uv.lock`. Não é preciso ativar ambiente virtual: todo comando roda com `uv run`.
+
+### 3. Gerar o banco
+
+```bash
+uv run python executar.py
+```
+
+Leva poucos segundos e termina com `verificações: 12 de 12 ok`, a contagem dos 15 marts e `Pronto: banco recriado do zero`. O banco fica em `data/olympics.duckdb` (não vai para o Git; é sempre recriado a partir de `raw/`).
+
+### 4. Rodar os testes
+
+```bash
+uv run pytest
+uv run ruff check .
+```
+
+Os testes usam dados inventados e bancos temporários: não precisam do banco gerado no passo 3 e não o alteram.
+
+### 5. Abrir o dashboard
+
+```bash
+uv run streamlit run app/app.py
+```
+
+Abra **http://localhost:8501** no navegador. Para parar, `Ctrl+C` no terminal.
+
+### Problemas comuns
+
+- **`uv` não é reconhecido:** o terminal foi aberto antes da instalação. Feche e abra de novo.
+- **"Banco não encontrado" no dashboard:** rode o passo 3 antes.
+- **"Não foi possível apagar ... está aberto em outro programa"** ao rodar o `executar.py`: o `ui.py` (explorador do banco) está aberto. Feche com `Ctrl+C` e rode de novo. O dashboard pode ficar aberto.
+- **Números antigos no dashboard depois de regerar o banco:** menu do Streamlit (⋮, no canto superior direito) → **Clear cache**, ou espere 1 hora.
+
+### Detalhes do `executar.py`
 
 O `executar.py` apaga o banco gerado (`data/olympics.duckdb`; nunca toca em `raw/`) e roda as três etapas em ordem, em poucos segundos. Ele confere os arquivos de `raw/` **antes** de apagar, e para na primeira etapa que falhar, dizendo qual foi. Se o `ui.py` estiver aberto, ele avisa para fechar e não apaga nada.
 
@@ -262,6 +305,9 @@ _H4, H5 e `notes` vazio já foram resolvidos em `refined.noc_regions`, H2 em `re
 | Dashboard | Exibir as 10 primeiras linhas nos gráficos de barras (as tabelas mostram todas) | Gráfico com centenas de barras fica ilegível; as linhas já vêm ordenadas do SQL. Em "Tamanho das modalidades", o gráfico reordena as linhas pelo indicador escolhido antes de pegar as 10 primeiras (só muda a ordem, não calcula nada) | — |
 | Dashboard | Caixa "só países que já ganharam medalha" nas listas e tabelas onde aparecem países sem medalha (seleção de país, estreias, eficiência); marcada por padrão na página Medalhas, desmarcada nas demais | Pedido do usuário: no Inverno, por exemplo, o Brasil participou mas nunca ganhou medalha, e aparecia na lista de uma visão de medalhas. O filtro é um `WHERE` com parâmetro | Inverno: 119 → 46 países na lista; Verão: estreias 228 → 146, eficiência em 2016 114 → 79 |
 | Execução | `executar.py` apaga o banco gerado antes de reconstruir; confere `raw/` antes de apagar | "Do zero" de verdade: o `CREATE OR REPLACE` de cada etapa não remove tabelas que deixaram de existir (ex.: um mart renomeado). Conferir antes evita perder o banco por falta de um CSV | banco real: 24,1 MB → 18,4 MB, com as mesmas contagens em todas as tabelas |
+| Testes (6.2) | Teste de fumaça das 4 páginas do dashboard nas duas temporadas, e do topo do app (período, banco inexistente), com o simulador do Streamlit (`AppTest`) sobre um banco temporário | As páginas só eram conferidas à mão; agora uma página quebrada derruba o `pytest` | 242 testes no total |
+| Testes (6.2) | Cobertura medida uma vez com `uv run --with pytest-cov pytest --cov`, sem acrescentar dependência ao projeto | Achar código que nenhum teste executa sem mais uma biblioteca para manter | 91% → 96% depois dos testes novos; o que falta é a parte do `ui.py` que sobe o servidor (verificação manual) e linhas `if __name__ == "__main__"` |
+| Lint (6.2) | Ruff com as regras padrão mais `E501` (linha até 88 caracteres) e `B905` (`zip` com `strict=`) | O formatador não quebra textos e SQL longos; `zip` sem `strict` esconde listas de tamanhos diferentes | 27 linhas longas e 2 `zip` corrigidos |
 | Estrutura | Configuração mínima do Ruff (`known-first-party`) no `pyproject.toml` | Os módulos do `app/` são importados sem prefixo (o `streamlit run` coloca `app/` no caminho), e o Ruff os misturava com as bibliotecas externas | — |
 | Mart de sede | Não feito (vantagem do país-sede) | Os CSVs só têm a cidade-sede; nenhuma coluna liga cidade a país e nenhuma nota de `noc_regions` cita as 42 cidades. Fazer exigiria dado de fora dos CSVs | — |
 | Origem | Nomes sem letras acentuadas (ex.: `Mnica`, `Rukajrvi`) mantidos como vieram | O `athlete_events.csv` original tem 0 bytes fora do ASCII: os acentos já foram removidos na origem do Kaggle, não na nossa leitura. Não há como recuperar sem inventar dado | nenhuma (nada alterado) |
@@ -288,3 +334,5 @@ _Preenchido ao longo do projeto, no momento em que acontece._
 | 5.1 — dashboard | No teste das consultas, criou o banco temporário com o nome `marts.duckdb`; o DuckDB passou a ter um catálogo `marts` que conflita com o schema `marts` | Os testes falharam com "Ambiguous reference to catalog or schema"; o arquivo foi renomeado |
 | 5.2 — dashboard (verificação) | No script avulso que conferiu as 4 páginas, o rótulo do resumo ficou "Países" para todas | Lendo a saída: os cabeçalhos conferidos eram de cada página, então o resultado valia; só o rótulo estava errado |
 | 5.2 — filtro de medalha (verificação) | Ao conferir se o Brasil saía da lista, procurou `"BRA"` nas opções, mas o simulador devolve o texto da tela (`"BRA — Brazil"`), e o resultado deu falso nos dois casos | O caso com a caixa desmarcada deveria ter o Brasil; refeito procurando o texto completo, o filtro estava certo |
+| 5.1 — `consultas.py` | `executar()` e `banco_existe()` fixavam o caminho do banco na definição da função, o que impedia testar as páginas sem abrir o banco real | Ao escrever o teste das páginas na 6.2; passaram a ler o caminho na hora da chamada, como o `db.py` |
+| 5.1/5.2 — páginas | Quando um filtro deixava o resultado vazio (ex.: corte de delegação mínima alto), a página montava um gráfico sem dados | O teste de fumaça da 6.2 mostrou um aviso do Altair; agora a página mostra "Nenhum dado com esses filtros" |
