@@ -30,7 +30,7 @@ Os dois arquivos se ligam pela coluna `NOC`.
 |---|---|---|
 | **raw** | cópia fiel dos arquivos de origem, tudo como texto (`raw.athlete_events`: 271.116 linhas; `raw.noc_regions`: 230 linhas) | feito |
 | **refined** | dados tipados, limpos e modelados (dimensões e fato) | feito, com 12 verificações a cada execução: `refined.noc_regions` (231 linhas), `refined.games` (51), `refined.games_cities` (52), `refined.events` (765), `refined.athletes` (135.571), fato `refined.athlete_results` (269.731) |
-| **marts** | indicadores, cada um gerado por um arquivo em `sql/marts/` | feito (os 4 marts ★): `marts.medalhas_por_pais_edicao` (3.803 linhas), `marts.quadro_historico` (347), `marts.evolucao_olimpica` (50), `marts.participacao_genero` (100) |
+| **marts** | indicadores, cada um gerado por um arquivo em `sql/marts/` | em andamento: 4 marts ★ prontos (`medalhas_por_pais_edicao`, `quadro_historico`, `evolucao_olimpica`, `participacao_genero`) e marts 05 a 07; faltam 08 a 15 |
 | **dashboard** | app Streamlit em `app/app.py`, lendo só do schema `marts` | a fazer |
 
 ## Indicadores
@@ -49,6 +49,11 @@ Cada indicador é uma tabela no schema `marts`, gerada por **um** arquivo SQL. O
 | ★ `marts.quadro_historico` | Qual é o quadro de medalhas de todos os tempos de cada país, no Verão e no Inverno? | NOC × temporada (inclusive quem nunca ganhou medalha) | [`sql/marts/02_quadro_historico.sql`](sql/marts/02_quadro_historico.sql) | 347 |
 | ★ `marts.evolucao_olimpica` | Como os Jogos cresceram: quantos atletas, países, modalidades e provas em cada edição? | edição | [`sql/marts/03_evolucao_olimpica.sql`](sql/marts/03_evolucao_olimpica.sql) | 50 |
 | ★ `marts.participacao_genero` | Como mudou a participação de homens e mulheres ao longo das edições? | edição × sexo (toda edição com F e M) | [`sql/marts/04_participacao_genero.sql`](sql/marts/04_participacao_genero.sql) | 100 |
+| `marts.desempenho_esportivo` | Qual o tamanho de cada modalidade: participações, atletas, provas e medalhas? | modalidade × temporada | [`sql/marts/05_desempenho_esportivo.sql`](sql/marts/05_desempenho_esportivo.sql) | 68 |
+| `marts.perfil_atletas` | Qual a idade, altura e peso médios dos atletas de cada modalidade, por sexo? | modalidade × sexo × temporada | [`sql/marts/06_perfil_atletas.sql`](sql/marts/06_perfil_atletas.sql) | 118 |
+| `marts.perfil_atletas_pais` | Qual a idade, altura e peso médios dos atletas de cada país, por sexo? | NOC × sexo × temporada | [`sql/marts/07_perfil_atletas_pais.sql`](sql/marts/07_perfil_atletas_pais.sql) | 654 |
+
+As médias de idade, altura e peso vêm com `n_idade`, `n_altura` e `n_peso`: quantos atletas × edição entraram em cada média. Altura em centímetros e peso em quilogramas no banco; o dashboard mostra no padrão brasileiro (ex.: 1,75 m e 63,50 kg).
 
 ## Como rodar do zero
 
@@ -91,6 +96,9 @@ marts.medalhas_por_pais_edicao: 3.803 linhas
 marts.quadro_historico: 347 linhas
 marts.evolucao_olimpica: 50 linhas
 marts.participacao_genero: 100 linhas
+marts.desempenho_esportivo: 68 linhas
+marts.perfil_atletas: 118 linhas
+marts.perfil_atletas_pais: 654 linhas
 ```
 
 _Os comandos das próximas camadas serão adicionados a cada etapa._
@@ -193,6 +201,9 @@ _H4, H5 e `notes` vazio já foram resolvidos em `refined.noc_regions`, H2 em `re
 | Mart 03 | Art Competitions fora de atletas, países, modalidades e provas | Mesma exclusão padrão de todos os marts. Muda bastante 7 edições (1912 a 1948): em 1932 Summer, 1.922 atletas com Art e 1.335 sem | 7 edições com contagem menor; nenhuma edição some |
 | Mart 04 | Toda edição tem as linhas F e M, mesmo com zero atletas de um sexo | Em 1896 não houve mulheres: com a linha F = 0, o gráfico mostra 0% em vez de um buraco, e o dashboard não precisa completar linhas (ele só faz `SELECT ... WHERE`). O zero é o resultado da contagem, não dado inventado | 1 linha com zero (1896 Summer, F); 100 linhas no total |
 | Mart 04 | `percentual_atletas` de 0 a 100 com 2 casas (`DECIMAL(5,2)`) | Mesmo padrão do peso; na tela vira `45,03%`. O arredondamento poderia fazer F + M somar 99,99 ou 100,01 | nos dados reais, F + M soma exatamente 100,00 nas 50 edições |
+| Marts 06 e 07 | Nas médias de idade, altura e peso, cada atleta entra **uma vez por edição** (por modalidade no 06, por NOC no 07), não uma vez por prova | A média responde "qual a altura média dos atletas"; por linha, quem disputou 15 provas na mesma edição pesaria 15 vezes. Nenhum atleta tem valores diferentes entre provas da mesma edição, então juntar não perde nada | 265.735 participações → 184.569 atletas × edição (0 com valores diferentes). No 06, 599 atletas × edição contam em duas modalidades |
+| Marts 06 e 07 | Médias com 2 casas, sem imputação, com `n_idade`, `n_altura` e `n_peso`; grupos com poucos dados ficam no mart | Mostra sobre quantos dados cada média foi calculada; quem exibe decide filtrar | 06: 11 grupos sem nenhuma altura; 07: 14 |
+| Mart de sede | Não feito (vantagem do país-sede) | Os CSVs só têm a cidade-sede; nenhuma coluna liga cidade a país e nenhuma nota de `noc_regions` cita as 42 cidades. Fazer exigiria dado de fora dos CSVs | — |
 | Origem | Nomes sem letras acentuadas (ex.: `Mnica`, `Rukajrvi`) mantidos como vieram | O `athlete_events.csv` original tem 0 bytes fora do ASCII: os acentos já foram removidos na origem do Kaggle, não na nossa leitura. Não há como recuperar sem inventar dado | nenhuma (nada alterado) |
 | Projeto | Dashboard Streamlit obrigatório (no desafio é opcional) | Decisão do autor: o projeto só está completo com o dashboard lendo os marts | — |
 
