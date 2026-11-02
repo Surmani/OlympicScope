@@ -34,7 +34,7 @@ Os dois arquivos se ligam pela coluna `NOC`.
 | **raw** | cópia fiel dos arquivos de origem, tudo como texto (`raw.athlete_events`: 271.116 linhas; `raw.noc_regions`: 230 linhas) | feito |
 | **refined** | dados tipados, limpos e modelados (dimensões e fato) | feito, com 12 verificações a cada execução: `refined.noc_regions` (231 linhas), `refined.games` (51), `refined.games_cities` (52), `refined.events` (765), `refined.athletes` (135.571), fato `refined.athlete_results` (269.731) |
 | **marts** | indicadores, cada um gerado por um arquivo em `sql/marts/` | feito: 15 marts (os 4 ★ e os 05 a 15), listados em "Indicadores" |
-| **dashboard** | app Streamlit em `app/app.py`, lendo só do schema `marts` | em andamento: páginas Medalhas e Países prontas; Atletas e Os Jogos na unidade 5.2 |
+| **dashboard** | app Streamlit em `app/app.py`, lendo só do schema `marts` | feito: 4 páginas (Medalhas, Países, Atletas, Os Jogos) com os 15 marts; publicação na unidade 6.4 |
 
 ## Indicadores
 
@@ -134,6 +134,8 @@ Abre em http://localhost:8501. O dashboard só **consulta**: lê o schema `marts
 - **Temporada** (Verão ou Inverno) no menu lateral, valendo para todas as páginas.
 - **Medalhas:** quadro por edição e de um país ao longo do tempo, quadro histórico, ranking de atletas e domínio por modalidade.
 - **Países:** estreias, medalhas por 100 atletas, mulheres na delegação e perfil médio dos atletas.
+- **Atletas:** perfil médio por modalidade, longevidade (mais edições disputadas) e medalhistas mais jovens e mais velhos.
+- **Os Jogos:** evolução (atletas, países, modalidades e provas), participação de mulheres e homens, tamanho das modalidades e programa olímpico.
 - Os eixos dos gráficos saem no formato americano (limitação dos gráficos nativos do Streamlit); tabelas e textos, no brasileiro.
 - O banco só fica aberto durante cada consulta, então dá para rodar o pipeline com o dashboard aberto. Os resultados ficam em cache por 1 hora; para ver números novos antes disso, use "Clear cache" no menu do Streamlit.
 
@@ -246,9 +248,9 @@ _H4, H5 e `notes` vazio já foram resolvidos em `refined.noc_regions`, H2 em `re
 | Mart 13 | Só atletas com 2 edições ou mais; Verão e Inverno somados; ranking por edições e, no empate, anos de carreira | Quem esteve numa edição só não tem longevidade para mostrar; a carreira olímpica é uma só | 36.770 de 133.179 atletas; máximo de 10 edições (Ian Millar, 1972–2012) |
 | Mart 14 | Todos os empatados ficam; uma linha por atleta em cada extremo, com quantas medalhas ganhou naquela idade e as provas juntas; medalhas sem idade ficam de fora | Escolher um entre atletas da mesma idade seria arbitrário. Toda modalidade tem medalhista com idade | 190 linhas (97 mais jovens, 93 mais velhos); 573 medalhas sem idade fora do mart |
 | Mart 15 | "Programa atual" = última edição do dataset (2016 no Verão, 2014 no Inverno); `ausencias` = edições da temporada, entre a primeira e a última, sem a modalidade | O dataset termina nessas edições; ausências mostram modalidades que saíram e voltaram | 68 modalidades: 49 no programa de 2016/2014, 19 com ausências |
-| Dashboard | Consultas do app separadas da tela (`app/consultas.py`), cada uma com texto SQL fixo e filtros como parâmetro; um teste confere que nenhuma tem `SUM`, `AVG`, `COUNT`, `MIN`, `MAX`, `GROUP BY`, `JOIN` ou janela, nem lê `refined`/`raw` | Garante a regra "só `SELECT ... WHERE` nos marts" com teste, não só com revisão | 12 consultas |
+| Dashboard | Consultas do app separadas da tela (`app/consultas.py`), cada uma com texto SQL fixo e filtros como parâmetro; um teste confere que nenhuma tem `SUM`, `AVG`, `COUNT`, `MIN`, `MAX`, `GROUP BY`, `JOIN` ou janela, nem lê `refined`/`raw` | Garante a regra "só `SELECT ... WHERE` nos marts" com teste, não só com revisão | 19 consultas |
 | Dashboard | Cortes mínimos ajustáveis (padrão 10): delegação mínima na eficiência e mínimo de atletas na média do perfil por país | Amostras pequenas distorcem taxa e média; o corte é um `WHERE`, então a regra do dashboard continua valendo | — |
-| Dashboard | Exibir as 10 primeiras linhas nos gráficos de barras (as tabelas mostram todas) | Gráfico com centenas de barras fica ilegível; as linhas já vêm ordenadas do SQL | — |
+| Dashboard | Exibir as 10 primeiras linhas nos gráficos de barras (as tabelas mostram todas) | Gráfico com centenas de barras fica ilegível; as linhas já vêm ordenadas do SQL. Em "Tamanho das modalidades", o gráfico reordena as linhas pelo indicador escolhido antes de pegar as 10 primeiras (só muda a ordem, não calcula nada) | — |
 | Estrutura | Configuração mínima do Ruff (`known-first-party`) no `pyproject.toml` | Os módulos do `app/` são importados sem prefixo (o `streamlit run` coloca `app/` no caminho), e o Ruff os misturava com as bibliotecas externas | — |
 | Mart de sede | Não feito (vantagem do país-sede) | Os CSVs só têm a cidade-sede; nenhuma coluna liga cidade a país e nenhuma nota de `noc_regions` cita as 42 cidades. Fazer exigiria dado de fora dos CSVs | — |
 | Origem | Nomes sem letras acentuadas (ex.: `Mnica`, `Rukajrvi`) mantidos como vieram | O `athlete_events.csv` original tem 0 bytes fora do ASCII: os acentos já foram removidos na origem do Kaggle, não na nossa leitura. Não há como recuperar sem inventar dado | nenhuma (nada alterado) |
