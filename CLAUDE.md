@@ -11,13 +11,13 @@ Responda sempre em português.
 
 ## Estado atual
 
-Concluídas e commitadas: unidades 0.1 (estrutura uv e .gitignore), 0.2 (arquivos originais em raw/), 0.3 (README e docs/SPEC.md), 1.1 (`pipeline/db.py` com testes), 2.1 (validação dos arquivos de origem em `pipeline/ingestao.py`), 2.2 (leitura dos CSVs como texto e criação das tabelas raw), 2.3 (conferência das contagens e registro no README), 2.4 (`ui.py`, explorador somente leitura), 3.1 (hipóteses H1–H8 em `sql/investigacao/hipoteses.sql` e no README), 3.2a (`pipeline/refined.py` e `refined.noc_regions`), 3.2b (`refined.games` e `refined.games_cities`), 3.2c (`refined.events`), 3.2d (`refined.athletes`), 3.3 (fato `refined.athlete_results`), 3.4 (12 verificações em `sql/verificacoes/refined.sql`), 4.1 (`pipeline/marts.py` e `pipeline/executor_sql.py`), 4.2 (mart ★ 01_medalhas_por_pais_edicao), mart ★ 02_quadro_historico, mart ★ 03_evolucao_olimpica e mart ★ 04_participacao_genero. Etapas 2 e 3 fechadas; os 4 marts ★ prontos.
+Concluídas e commitadas: unidades 0.1 (estrutura uv e .gitignore), 0.2 (arquivos originais em raw/), 0.3 (README e docs/SPEC.md), 1.1 (`pipeline/db.py` com testes), 2.1 (validação dos arquivos de origem em `pipeline/ingestao.py`), 2.2 (leitura dos CSVs como texto e criação das tabelas raw), 2.3 (conferência das contagens e registro no README), 2.4 (`ui.py`, explorador somente leitura), 3.1 (hipóteses H1–H8 em `sql/investigacao/hipoteses.sql` e no README), 3.2a (`pipeline/refined.py` e `refined.noc_regions`), 3.2b (`refined.games` e `refined.games_cities`), 3.2c (`refined.events`), 3.2d (`refined.athletes`), 3.3 (fato `refined.athlete_results`), 3.4 (12 verificações em `sql/verificacoes/refined.sql`), 4.1 (`pipeline/marts.py` e `pipeline/executor_sql.py`), 4.2 (mart ★ 01_medalhas_por_pais_edicao), mart ★ 02_quadro_historico, mart ★ 03_evolucao_olimpica, mart ★ 04_participacao_genero e rodada 1 da 4.3 (marts 05, 06 e 07). Etapas 2 e 3 fechadas; os 4 marts ★ prontos.
 
 O Streamlit é obrigatório neste projeto (decisão do usuário, já na spec).
 
 A 3.2 foi dividida em quatro unidades: 3.2a `noc_regions`, 3.2b `games`, 3.2c `events`, 3.2d `athletes`.
 
-Próxima: **unidade 4.3, rodada 1 — marts 05, 06 e 07**. Depois: rodadas 08–10, 11–13, 14–15; Streamlit; 6.1 a 6.4 (6.4 = publicação).
+Próxima: **unidade 4.3, rodada 2 — marts 08, 09 e 10**. Depois: rodadas 11–13, 14–15; Streamlit; 6.1 a 6.4 (6.4 = publicação).
 
 Marts 05–15 são feitos em rodadas de até três (pedido do usuário), cada mart com seu commit. Numeração: 06 `perfil_atletas`, 07 `perfil_atletas_pais`, 08 `ranking_atletas`. Mart de vantagem da sede descartado (os CSVs não têm o país da sede).
 
