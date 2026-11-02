@@ -749,3 +749,119 @@ def test_longevidade_1906_e_art_nao_contam_como_edicao(con):
         con,
         "SELECT COUNT(*) FROM marts.longevidade_atletas WHERE athlete_id IN (10, 12)",
     ) == [(0,)]
+
+
+# --- 14_medalhistas_extremos ------------------------------------------------------
+
+
+def test_medalhistas_extremos_completo(con):
+    atletismo = "Athletics Men's 100 metres"
+    basquete = "Basketball Men's Basketball"
+    natacao = "Swimming Men's 100 metres Freestyle"
+    esqui = "Alpine Skiing Men's Downhill"
+    assert linhas(
+        con,
+        "SELECT sport, season, extremo, idade, athlete_id, name, sex, noc, games_id, "
+        "medalhas, provas FROM marts.medalhistas_extremos",
+    ) == [
+        ("Athletics", "Summer", "mais jovem", 22, 7, "A7", "F", "JAM", "2016 Summer", 1, atletismo),
+        ("Athletics", "Summer", "mais velho", 25, 21, "A21", "M", "BRA", "2012 Summer", 1, atletismo),
+        ("Basketball", "Summer", "mais jovem", 20, 1, "A1", "M", "BRA", "2016 Summer", 1, basquete),
+        ("Basketball", "Summer", "mais velho", 29, 6, "A6", "M", "USA", "2016 Summer", 1, basquete),
+        ("Swimming", "Summer", "mais jovem", 19, 11, "A11", "F", "BRA", "2016 Summer", 1, natacao),
+        ("Swimming", "Summer", "mais velho", 21, 13, "A13", "F", "CAN", "2016 Summer", 1, natacao),
+        ("Alpine Skiing", "Winter", "mais jovem", 24, 30, "A30", "F", "CAN", "2014 Winter", 1, esqui),
+        ("Alpine Skiing", "Winter", "mais velho", 28, 31, "A31", "M", "USA", "2014 Winter", 1, esqui),
+    ]  # fmt: skip
+
+
+def test_extremos_empate_mantem_todos(con):
+    # O atleta 9 ganha ouro no atletismo com 25 anos (inserir_resultado usa 25),
+    # empatando com o atleta 21 como mais velho.
+    inserir_resultado(con, 9, "2016 Summer", 2, "ARG", "Gold")
+
+    assert linhas(
+        con,
+        "SELECT athlete_id, idade FROM marts.medalhistas_extremos "
+        "WHERE sport = 'Athletics' AND extremo = 'mais velho' ORDER BY athlete_id",
+    ) == [(9, 25), (21, 25)]
+
+
+def test_extremos_atleta_com_duas_medalhas_na_mesma_idade_e_uma_linha(con):
+    con.execute(
+        "INSERT INTO refined.events VALUES (6, 'Swimming', 'Swimming Women''s 200 metres')"
+    )
+    con.execute(
+        "INSERT INTO refined.athlete_results "
+        "VALUES (11, '2016 Summer', 6, 'BRA', 'Gold', 19, 175, 65)"
+    )
+    executor_sql.executar(con, marts.PASTA_SQL, "marts")
+
+    assert linhas(
+        con,
+        "SELECT athlete_id, medalhas, provas FROM marts.medalhistas_extremos "
+        "WHERE sport = 'Swimming' AND extremo = 'mais jovem'",
+    ) == [(11, 2, "Swimming Men's 100 metres Freestyle | Swimming Women's 200 metres")]
+
+
+def test_extremos_exclusoes(con):
+    # A atleta 10 (40 anos, ouro só em Art) e o atleta 12 (só 1906) não entram.
+    assert linhas(
+        con,
+        "SELECT COUNT(*) FROM marts.medalhistas_extremos WHERE athlete_id IN (10, 12)",
+    ) == [(0,)]
+
+
+# --- 15_programa_olimpico ---------------------------------------------------------
+
+
+def test_programa_olimpico_completo(con):
+    assert linhas(
+        con,
+        "SELECT sport, season, primeira_edicao, primeiro_ano, ultima_edicao, "
+        "ultimo_ano, edicoes, ausencias, no_programa_atual "
+        "FROM marts.programa_olimpico",
+    ) == [
+        ("Athletics", "Summer", "2012 Summer", 2012, "2016 Summer", 2016, 2, 0, True),
+        ("Basketball", "Summer", "2016 Summer", 2016, "2016 Summer", 2016, 1, 0, True),
+        ("Swimming", "Summer", "2016 Summer", 2016, "2016 Summer", 2016, 1, 0, True),
+        (
+            "Alpine Skiing",
+            "Winter",
+            "2014 Winter",
+            2014,
+            "2014 Winter",
+            2014,
+            1,
+            0,
+            True,
+        ),
+    ]
+
+
+def test_programa_ausencia_e_modalidade_que_saiu(con):
+    # 2008 Summer: basquete (volta em 2016, pulando 2012) e beisebol (só 2008).
+    con.execute("INSERT INTO refined.games VALUES ('2008 Summer', 2008, 'Summer')")
+    con.execute(
+        "INSERT INTO refined.events VALUES (7, 'Baseball', 'Baseball Men''s Baseball')"
+    )
+    con.execute(
+        "INSERT INTO refined.athlete_results VALUES "
+        "(40, '2008 Summer', 1, 'USA', NULL, 25, 190, 90), "
+        "(41, '2008 Summer', 7, 'USA', NULL, 25, 185, 85)"
+    )
+    executor_sql.executar(con, marts.PASTA_SQL, "marts")
+
+    assert linhas(
+        con,
+        "SELECT sport, edicoes, ausencias, no_programa_atual FROM marts.programa_olimpico "
+        "WHERE sport IN ('Basketball', 'Baseball') ORDER BY sport",
+    ) == [("Baseball", 1, 0, False), ("Basketball", 2, 1, True)]
+
+
+def test_programa_1906_e_art_ficam_fora(con):
+    assert linhas(
+        con,
+        "SELECT COUNT(*) FROM marts.programa_olimpico "
+        "WHERE sport = 'Art Competitions' OR primeira_edicao = '1906 Summer'",
+    ) == [(0,)]
