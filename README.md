@@ -75,10 +75,19 @@ Pré-requisito: [uv](https://docs.astral.sh/uv/) instalado.
 git clone https://github.com/Surmani/OlympicScope.git
 cd OlympicScope
 uv sync
+uv run python executar.py            # reconstrói tudo do zero: ingestão → refined → marts
+uv run pytest                        # testes (não usam o banco real)
+uv run streamlit run app/app.py      # dashboard em http://localhost:8501
+```
+
+O `executar.py` apaga o banco gerado (`data/olympics.duckdb`; nunca toca em `raw/`) e roda as três etapas em ordem, em poucos segundos. Ele confere os arquivos de `raw/` **antes** de apagar, e para na primeira etapa que falhar, dizendo qual foi. Se o `ui.py` estiver aberto, ele avisa para fechar e não apaga nada.
+
+Cada etapa também pode ser rodada sozinha:
+
+```bash
 uv run python -m pipeline.ingestao   # raw/ → schema raw do DuckDB
 uv run python -m pipeline.refined    # schema raw → schema refined (SQL em sql/refined/)
 uv run python -m pipeline.marts      # schema refined → schema marts (SQL em sql/marts/)
-uv run pytest
 ```
 
 A ingestão cria o banco em `data/olympics.duckdb` e imprime a contagem de cada tabela lida do banco. Pode ser rodada quantas vezes quiser: a saída é sempre a mesma.
@@ -252,6 +261,7 @@ _H4, H5 e `notes` vazio já foram resolvidos em `refined.noc_regions`, H2 em `re
 | Dashboard | Cortes mínimos ajustáveis (padrão 10): delegação mínima na eficiência e mínimo de atletas na média do perfil por país | Amostras pequenas distorcem taxa e média; o corte é um `WHERE`, então a regra do dashboard continua valendo | — |
 | Dashboard | Exibir as 10 primeiras linhas nos gráficos de barras (as tabelas mostram todas) | Gráfico com centenas de barras fica ilegível; as linhas já vêm ordenadas do SQL. Em "Tamanho das modalidades", o gráfico reordena as linhas pelo indicador escolhido antes de pegar as 10 primeiras (só muda a ordem, não calcula nada) | — |
 | Dashboard | Caixa "só países que já ganharam medalha" nas listas e tabelas onde aparecem países sem medalha (seleção de país, estreias, eficiência); marcada por padrão na página Medalhas, desmarcada nas demais | Pedido do usuário: no Inverno, por exemplo, o Brasil participou mas nunca ganhou medalha, e aparecia na lista de uma visão de medalhas. O filtro é um `WHERE` com parâmetro | Inverno: 119 → 46 países na lista; Verão: estreias 228 → 146, eficiência em 2016 114 → 79 |
+| Execução | `executar.py` apaga o banco gerado antes de reconstruir; confere `raw/` antes de apagar | "Do zero" de verdade: o `CREATE OR REPLACE` de cada etapa não remove tabelas que deixaram de existir (ex.: um mart renomeado). Conferir antes evita perder o banco por falta de um CSV | banco real: 24,1 MB → 18,4 MB, com as mesmas contagens em todas as tabelas |
 | Estrutura | Configuração mínima do Ruff (`known-first-party`) no `pyproject.toml` | Os módulos do `app/` são importados sem prefixo (o `streamlit run` coloca `app/` no caminho), e o Ruff os misturava com as bibliotecas externas | — |
 | Mart de sede | Não feito (vantagem do país-sede) | Os CSVs só têm a cidade-sede; nenhuma coluna liga cidade a país e nenhuma nota de `noc_regions` cita as 42 cidades. Fazer exigiria dado de fora dos CSVs | — |
 | Origem | Nomes sem letras acentuadas (ex.: `Mnica`, `Rukajrvi`) mantidos como vieram | O `athlete_events.csv` original tem 0 bytes fora do ASCII: os acentos já foram removidos na origem do Kaggle, não na nossa leitura. Não há como recuperar sem inventar dado | nenhuma (nada alterado) |
