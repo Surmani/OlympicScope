@@ -200,6 +200,21 @@ Abre em http://localhost:8501. O dashboard só **consulta**: lê o schema `marts
 - Os eixos dos gráficos saem no formato americano (limitação dos gráficos nativos do Streamlit); tabelas e textos, no brasileiro.
 - O banco só fica aberto durante cada consulta, então dá para rodar o pipeline com o dashboard aberto. Os resultados ficam em cache por 1 hora; para ver números novos antes disso, use "Clear cache" no menu do Streamlit.
 
+### Dashboard online
+
+> **Link:** _a preencher depois da publicação no Streamlit Community Cloud._
+
+- Só consulta: ninguém altera nada pela tela.
+- No plano gratuito, o app **dorme** depois de um tempo sem visitas. Quem chegar nesse momento clica no botão para acordá-lo e espera um pouco.
+- Ao acordar, o servidor não tem banco (o disco da hospedagem é temporário e `data/` não vai para o Git). Na primeira visita, o app gera o banco rodando o `executar.py` (cerca de 6 segundos); as visitas seguintes usam o banco já gerado. Isso só acontece com o secret `gerar_banco_se_faltar = true`, ligado no painel da hospedagem; na sua máquina, sem banco, o app só avisa.
+- As bibliotecas da hospedagem vêm do `requirements.txt`, gerado do `uv.lock`. Depois de mudar dependências, regere com o comando que está no topo do arquivo (um teste avisa se ele ficar desatualizado).
+
+**Para publicar** (feito por quem tem a conta):
+1. Entrar em [share.streamlit.io](https://share.streamlit.io) com a conta do GitHub.
+2. **Create app** → repositório `Surmani/OlympicScope`, branch `main`, arquivo `app/app.py`; escolher o endereço (ex.: `olympicscope`).
+3. **Advanced settings** → Python **3.13** e, em **Secrets**, colar: `gerar_banco_se_faltar = true`.
+4. **Deploy**. A cada `git push` na `main`, o app é atualizado sozinho.
+
 ## Explorar o banco no navegador
 
 ```bash
@@ -321,6 +336,8 @@ Detalhes, motivos e linhas afetadas em [Decisões sobre o dado](#decisões-sobre
 | Testes (6.2) | Teste de fumaça das 4 páginas do dashboard nas duas temporadas, e do topo do app (período, banco inexistente), com o simulador do Streamlit (`AppTest`) sobre um banco temporário | As páginas só eram conferidas à mão; agora uma página quebrada derruba o `pytest` | 242 testes no total |
 | Testes (6.2) | Cobertura medida uma vez com `uv run --with pytest-cov pytest --cov`, sem acrescentar dependência ao projeto | Achar código que nenhum teste executa sem mais uma biblioteca para manter | 91% → 96% depois dos testes novos; o que falta é a parte do `ui.py` que sobe o servidor (verificação manual) e linhas `if __name__ == "__main__"` |
 | Lint (6.2) | Ruff com as regras padrão mais `E501` (linha até 88 caracteres) e `B905` (`zip` com `strict=`) | O formatador não quebra textos e SQL longos; `zip` sem `strict` esconde listas de tamanhos diferentes | 27 linhas longas e 2 `zip` corrigidos |
+| Publicação (6.4) | Na hospedagem, o app gera o banco rodando o `executar.py` quando ele falta, só com o secret `gerar_banco_se_faltar = true`; uma vez por inicialização (`st.cache_resource`) | O banco não vem do Git e o disco da hospedagem é temporário. Versionar o banco (18 MB, binário que muda a cada execução) desfaria a decisão de mantê-lo fora do Git | simulação com o pipeline real: 6,2 s na primeira visita, 0,1 s na segunda |
+| Publicação (6.4) | `requirements.txt` gerado do `uv.lock` (`uv export`, sem ferramentas de desenvolvimento), com teste que confere se os dois batem | Formato que a hospedagem lê com certeza; o teste impede que ele fique desatualizado | 3 dependências diretas (DuckDB, pandas, Streamlit) e as delas, nas versões travadas |
 | Estrutura | Configuração mínima do Ruff (`known-first-party`) no `pyproject.toml` | Os módulos do `app/` são importados sem prefixo (o `streamlit run` coloca `app/` no caminho), e o Ruff os misturava com as bibliotecas externas | — |
 | Mart de sede | Não feito (vantagem do país-sede) | Os CSVs só têm a cidade-sede; nenhuma coluna liga cidade a país e nenhuma nota de `noc_regions` cita as 42 cidades. Fazer exigiria dado de fora dos CSVs | — |
 | Origem | Nomes sem letras acentuadas (ex.: `Mnica`, `Rukajrvi`) mantidos como vieram | O `athlete_events.csv` original tem 0 bytes fora do ASCII: os acentos já foram removidos na origem do Kaggle, não na nossa leitura. Não há como recuperar sem inventar dado | nenhuma (nada alterado) |
