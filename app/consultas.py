@@ -48,13 +48,15 @@ class Consulta(NamedTuple):
     parametros: tuple = ()
 
 
-def banco_existe(caminho: Path = CAMINHO_BANCO) -> bool:
-    return caminho.is_file()
+def banco_existe(caminho: Path | None = None) -> bool:
+    # CAMINHO_BANCO é lido na hora da chamada (não fixado na definição), o que
+    # permite aos testes das páginas apontá-lo para um banco temporário.
+    return (caminho or CAMINHO_BANCO).is_file()
 
 
-def executar(consulta: Consulta, caminho: Path = CAMINHO_BANCO) -> pd.DataFrame:
+def executar(consulta: Consulta, caminho: Path | None = None) -> pd.DataFrame:
     """Abre o banco em modo leitura, roda a consulta e fecha."""
-    con = duckdb.connect(str(caminho), read_only=True)
+    con = duckdb.connect(str(caminho or CAMINHO_BANCO), read_only=True)
     try:
         return con.execute(consulta.sql, list(consulta.parametros)).df()
     finally:
@@ -188,7 +190,8 @@ def perfil_paises(season: str, sex: str, minimo_atletas: int) -> Consulta:
     return Consulta(
         "SELECT noc, region, idade_media, altura_media, peso_media, "
         "n_idade, n_altura, n_peso FROM marts.perfil_atletas_pais "
-        "WHERE season = ? AND sex = ? AND n_altura >= ? ORDER BY altura_media DESC, noc",
+        "WHERE season = ? AND sex = ? AND n_altura >= ? ORDER BY altura_media DESC, "
+        "noc",
         (season, sex, minimo_atletas),
     )
 
@@ -198,9 +201,11 @@ def perfil_paises(season: str, sex: str, minimo_atletas: int) -> Consulta:
 
 def perfil_modalidades(season: str, sex: str, minimo_atletas: int) -> Consulta:
     return Consulta(
-        "SELECT sport, idade_media, altura_media, peso_media, n_idade, n_altura, n_peso "
+        "SELECT sport, idade_media, altura_media, peso_media, n_idade, n_altura, "
+        "n_peso "
         "FROM marts.perfil_atletas "
-        "WHERE season = ? AND sex = ? AND n_altura >= ? ORDER BY altura_media DESC, sport",
+        "WHERE season = ? AND sex = ? AND n_altura >= ? ORDER BY altura_media DESC, "
+        "sport",
         (season, sex, minimo_atletas),
     )
 

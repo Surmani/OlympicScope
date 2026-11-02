@@ -6,7 +6,7 @@ Só exibe o que vem das consultas (``consultas.py``); nenhuma conta aqui.
 import streamlit as st
 
 import consultas
-from componentes import mostrar_tabela
+from componentes import mostrar_tabela, sem_dados
 from dados import carregar
 from formatacao import (
     formatar_altura,
@@ -33,6 +33,8 @@ def perfil_por_modalidade(season):
             "Mínimo de atletas na média de altura", 1, 100, 10, key="corte_modalidade"
         )
     df = carregar(consultas.perfil_modalidades(season, sexo, minimo))
+    if sem_dados(df):
+        return
     st.bar_chart(
         df.head(10),
         x="sport",

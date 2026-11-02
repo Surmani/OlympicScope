@@ -11,6 +11,14 @@ from dados import carregar
 from formatacao import formatar_tabela
 
 
+def sem_dados(df) -> bool:
+    """Se o filtro não deixou nenhuma linha, avisa na tela e devolve True."""
+    if df.empty:
+        st.info("Nenhum dado com esses filtros. Tente afrouxar o corte mínimo.")
+        return True
+    return False
+
+
 def mostrar_tabela(df, formatos: dict, nomes: dict) -> None:
     """Tabela com as colunas formatadas no padrão brasileiro e nomes em português."""
     tabela = formatar_tabela(df, formatos).rename(columns=nomes)
@@ -38,7 +46,7 @@ def escolher_pais(season: str, chave: str, so_com_medalha_padrao: bool = False):
     if lista.empty:
         st.warning("Nenhum país para mostrar com esse filtro.")
         return None
-    rotulos = dict(zip(lista["noc"], lista["region"].fillna("sem região")))
+    rotulos = dict(zip(lista["noc"], lista["region"].fillna("sem região"), strict=True))
     nocs = list(rotulos)
     padrao = nocs.index("BRA") if "BRA" in nocs else 0
     return st.selectbox(
@@ -53,7 +61,7 @@ def escolher_pais(season: str, chave: str, so_com_medalha_padrao: bool = False):
 def escolher_edicao(season: str, chave: str) -> str:
     """Caixa de seleção de edição (padrão: a mais recente), com a cidade-sede."""
     lista = carregar(consultas.edicoes(season))
-    cidades = dict(zip(lista["games_id"], lista["city"]))
+    cidades = dict(zip(lista["games_id"], lista["city"], strict=True))
     return st.selectbox(
         "Edição",
         list(cidades),

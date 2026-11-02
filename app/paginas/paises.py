@@ -6,7 +6,7 @@ Só exibe o que vem das consultas (``consultas.py``); nenhuma conta aqui.
 import streamlit as st
 
 import consultas
-from componentes import escolher_edicao, escolher_pais, mostrar_tabela
+from componentes import escolher_edicao, escolher_pais, mostrar_tabela, sem_dados
 from dados import carregar
 from formatacao import (
     formatar_altura,
@@ -69,6 +69,8 @@ def eficiencia(season):
         key="eficiencia_so_com_medalha",
     )
     df = carregar(consultas.eficiencia(games_id, minimo, so_com_medalha))
+    if sem_dados(df):
+        return
     st.bar_chart(
         df.head(10),
         x="noc",
@@ -141,6 +143,8 @@ def perfil_por_pais(season):
     with coluna_corte:
         minimo = st.slider("Mínimo de atletas na média de altura", 1, 100, 10)
     df = carregar(consultas.perfil_paises(season, sexo, minimo))
+    if sem_dados(df):
+        return
     mostrar_tabela(
         df,
         {
