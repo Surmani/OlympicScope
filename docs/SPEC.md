@@ -8,6 +8,8 @@ O projeto constrói um pipeline completo — ingestão, transformação, modelag
 
 `RAW → REFINED → MARTS → STREAMLIT`
 
+Na arquitetura medalhão, as três camadas de dados equivalem a: **RAW → Bronze**, **REFINED → Silver**, **MARTS → Gold**. O Streamlit não é camada de dados: ele só lê a Gold.
+
 O desenvolvimento é incremental, orientado por especificação e dividido em unidades pequenas, cada uma com seu próprio commit.
 
 Este projeto é o desafio final da Trilha de Engenharia de Dados JR. Critério principal:

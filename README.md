@@ -38,12 +38,14 @@ Os dois arquivos de origem se ligam pela coluna `NOC`. Na refined, a fato se lig
 
 ## Camadas
 
-| Camada | O que tem | Status |
-|---|---|---|
-| **raw** | cópia fiel dos arquivos de origem, tudo como texto (`raw.athlete_events`: 271.116 linhas; `raw.noc_regions`: 230 linhas) | feito |
-| **refined** | dados tipados, limpos e modelados (dimensões e fato) | feito, com 12 verificações a cada execução: `refined.noc_regions` (231 linhas), `refined.games` (51), `refined.games_cities` (52), `refined.events` (765), `refined.athletes` (135.571), fato `refined.athlete_results` (269.731) |
-| **marts** | indicadores, cada um gerado por um arquivo em `sql/marts/` | feito: 15 marts (os 4 ★ e os 05 a 15), listados em "Indicadores" |
-| **dashboard** | app Streamlit em `app/app.py`, lendo só do schema `marts` | feito e publicado em https://olympicscope.streamlit.app: 4 páginas (Medalhas, Países, Atletas, Os Jogos) com os 15 marts |
+As camadas seguem a mesma ideia da arquitetura medalhão: **raw → Bronze**, **refined → Silver**, **marts → Gold**. O dashboard não é camada de dados: ele só lê a Gold.
+
+| Camada | Medalhão | O que tem | Status |
+|---|---|---|---|
+| **raw** | Bronze | cópia fiel dos arquivos de origem, tudo como texto (`raw.athlete_events`: 271.116 linhas; `raw.noc_regions`: 230 linhas) | feito |
+| **refined** | Silver | dados tipados, limpos e modelados (dimensões e fato) | feito, com 12 verificações a cada execução: `refined.noc_regions` (231 linhas), `refined.games` (51), `refined.games_cities` (52), `refined.events` (765), `refined.athletes` (135.571), fato `refined.athlete_results` (269.731) |
+| **marts** | Gold | indicadores, cada um gerado por um arquivo em `sql/marts/` | feito: 15 marts (os 4 ★ e os 05 a 15), listados em "Indicadores" |
+| **dashboard** | — | app Streamlit em `app/app.py`, lendo só do schema `marts` | feito e publicado em https://olympicscope.streamlit.app: 4 páginas (Medalhas, Países, Atletas, Os Jogos) com os 15 marts |
 
 ## Indicadores
 
